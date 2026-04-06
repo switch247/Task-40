@@ -1,47 +1,55 @@
 #!/usr/bin/env bash
-set -u
+set -euo pipefail
 
-TOTAL=2
-PASS=0
-FAIL=0
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT_DIR"
 
-echo "=== SentinelDesk One-Click Test Runner ==="
+COMPOSE="docker compose"
 
-if [ ! -x "./backend/node_modules/.bin/jest" ] || [ ! -x "./frontend/node_modules/.bin/vitest" ]; then
-  echo "[preflight] Test runners not found. Installing workspace dependencies (including dev)..."
-  if npm install --include=dev; then
-    echo "[preflight] Dependency install complete"
-  else
-    echo "[preflight] Dependency install failed"
-    echo "=== Final Summary ==="
-    echo "total=${TOTAL} pass=${PASS} fail=${TOTAL}"
-    exit 1
-  fi
-fi
+cleanup() {
+  echo ""
+  echo "[cleanup] docker compose down -v"
+  $COMPOSE down -v >/dev/null 2>&1 || true
+}
 
-echo "[1/2] unit_tests"
-if sh ./unit_tests/run.sh; then
-  PASS=$((PASS + 1))
-  echo "[run_tests] PASS unit_tests"
-else
-  FAIL=$((FAIL + 1))
-  echo "[run_tests] FAIL unit_tests"
-fi
+trap cleanup EXIT
 
-echo "[2/2] API_tests"
-if sh ./API_tests/run.sh; then
-  PASS=$((PASS + 1))
-  echo "[run_tests] PASS API_tests"
-else
-  FAIL=$((FAIL + 1))
-  echo "[run_tests] FAIL API_tests"
-fi
+wait_for_backend() {
+  echo "[infra] Waiting for backend health..."
+  for i in $(seq 1 60); do
+    if $COMPOSE exec -T backend node -e "fetch('http://localhost:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then
+      echo "[infra] Backend is healthy"
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "[infra] ERROR: backend did not become healthy in time"
+  $COMPOSE logs backend || true
+  return 1
+}
+
+echo "=== SentinelDesk Docker Test Runner ==="
+
+echo "[cleanup] Clearing previous compose state"
+$COMPOSE down -v >/dev/null 2>&1 || true
+
+echo "[build] docker compose up --build -d"
+$COMPOSE up --build -d postgres redis backend frontend
+
+wait_for_backend
+
+echo "[backend] npm test (unit) via docker exec"
+$COMPOSE exec -T backend sh -lc 'unset ENABLE_SEEDING ALLOW_DETERMINISTIC_SEED_CREDENTIALS; npm run test'
+
+echo "[backend] npm test:e2e (api) via docker exec"
+$COMPOSE exec -T backend npm run test:e2e
+
+echo "[frontend] Install Playwright Chromium via docker exec"
+# Playwright browsers are preinstalled in the frontend image
+
+echo "[frontend] npm test:e2e via docker exec"
+$COMPOSE exec -T frontend sh -lc 'export VITE_API_BASE_URL=http://backend:3000/api; CHROMIUM_BIN=$(command -v chromium-browser || command -v chromium); export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$CHROMIUM_BIN"; export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1; npm run test:e2e'
 
 echo "=== Final Summary ==="
-echo "total=${TOTAL} pass=${PASS} fail=${FAIL}"
-
-if [ "$FAIL" -gt 0 ]; then
-  exit 1
-fi
-
-exit 0
+echo "PASS backend unit, backend api/e2e, frontend e2e"

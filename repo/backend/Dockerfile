@@ -1,7 +1,8 @@
-FROM node:20-bookworm-slim
+FROM node:20-alpine
 
 WORKDIR /app
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# open ssl is necessary for prisma to work in production
+RUN apk add  openssl
 
 ENV PORT=3000
 ENV DATABASE_URL=postgresql://sentineldesk:sentineldesk@postgres:5432/sentineldesk?schema=public
@@ -21,7 +22,7 @@ RUN npm install
 COPY . .
 RUN npx prisma generate
 RUN npm run build
-RUN chmod +x scripts/docker-entrypoint.sh
+RUN sed -i 's/\r$//' scripts/docker-entrypoint.sh && chmod +x scripts/docker-entrypoint.sh
 
 EXPOSE 3000
 CMD ["sh", "scripts/docker-entrypoint.sh"]

@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import type { InputJsonValue } from "@prisma/client/runtime/library";
 import { join } from "path";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
@@ -8,7 +8,7 @@ import { JobQueueService, JobType } from "./job-queue.service";
 import { BackupCommandService } from "./backup-command.service";
 
 @Injectable()
-export class JobsService implements OnModuleInit {
+export class JobsService implements OnModuleInit, OnModuleDestroy {
   private scheduler: NodeJS.Timeout | null = null;
   private dailyRetentionKey = "jobs:last-retention-day";
   private dailyBackupKey = "jobs:last-backup-day";
@@ -29,6 +29,13 @@ export class JobsService implements OnModuleInit {
     this.scheduler = setInterval(() => {
       void this.tickScheduler();
     }, 60_000);
+  }
+
+  onModuleDestroy(): void {
+    if (this.scheduler) {
+      clearInterval(this.scheduler);
+      this.scheduler = null;
+    }
   }
 
   async getStatusSummary() {

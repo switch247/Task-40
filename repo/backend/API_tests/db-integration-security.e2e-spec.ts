@@ -33,6 +33,7 @@ describeDb("DB integration security flows (e2e)", () => {
   let prisma: PrismaClient;
   let storyVersionId: string;
   let storyId: string;
+  const systemUserId = "itest-system";
   const createdTransactionIds: string[] = [];
 
   async function login(username: string, password: string): Promise<{ cookie: string; csrf: string }> {
@@ -60,7 +61,12 @@ describeDb("DB integration security flows (e2e)", () => {
       .useValue({
         raw: {
           incr: jest.fn().mockResolvedValue(1),
-          expire: jest.fn().mockResolvedValue(1)
+          expire: jest.fn().mockResolvedValue(1),
+          get: jest.fn().mockResolvedValue(null),
+          set: jest.fn().mockResolvedValue("OK"),
+          rpush: jest.fn().mockResolvedValue(1),
+          lpop: jest.fn().mockResolvedValue(null),
+          llen: jest.fn().mockResolvedValue(0)
         },
         getHotRead: jest.fn().mockResolvedValue(null),
         setHotRead: jest.fn().mockResolvedValue(undefined),
@@ -83,6 +89,17 @@ describeDb("DB integration security flows (e2e)", () => {
 
     storyId = randomUUID();
     storyVersionId = randomUUID();
+
+    await prisma.user.upsert({
+      where: { id: systemUserId },
+      update: {},
+      create: {
+        id: systemUserId,
+        username: "itest-system",
+        passwordHash: "seeded-system-user-hash"
+      }
+    });
+
     await prisma.story.create({
       data: {
         id: storyId,
@@ -119,6 +136,7 @@ describeDb("DB integration security flows (e2e)", () => {
       await prisma.paymentChannelRequest.deleteMany({ where: { idempotencyKey: { startsWith: "itest-" } } });
       await prisma.transaction.deleteMany({ where: { id: { in: txIds } } });
       await prisma.story.deleteMany({ where: { id: storyId } });
+      await prisma.user.deleteMany({ where: { id: systemUserId } });
       await prisma.$disconnect();
     }
     await app.close();
@@ -220,7 +238,7 @@ describeDb("DB integration security flows (e2e)", () => {
 
     const first = await request(app.getHttpServer())
       .post("/payment-channels/prepaid_balance/charge")
-      .set("x-system-id", "itest-system")
+      .set("x-system-id", systemUserId)
       .set("x-signature", signature)
       .set("x-timestamp", timestamp)
       .set("x-nonce", nonce)
@@ -231,7 +249,7 @@ describeDb("DB integration security flows (e2e)", () => {
 
     const second = await request(app.getHttpServer())
       .post("/payment-channels/prepaid_balance/charge")
-      .set("x-system-id", "itest-system")
+      .set("x-system-id", systemUserId)
       .set("x-signature", signature)
       .set("x-timestamp", timestamp)
       .set("x-nonce", nonce)
@@ -251,7 +269,7 @@ describeDb("DB integration security flows (e2e)", () => {
     );
     const mutated = await request(app.getHttpServer())
       .post("/payment-channels/prepaid_balance/charge")
-      .set("x-system-id", "itest-system")
+      .set("x-system-id", systemUserId)
       .set("x-signature", mutatedSignature)
       .set("x-timestamp", timestamp)
       .set("x-nonce", nonce)
@@ -271,7 +289,7 @@ describeDb("DB integration security flows (e2e)", () => {
     );
     const replay = await request(app.getHttpServer())
       .post("/payment-channels/prepaid_balance/charge")
-      .set("x-system-id", "itest-system")
+      .set("x-system-id", systemUserId)
       .set("x-signature", replaySignature)
       .set("x-timestamp", replayTimestamp)
       .set("x-nonce", nonce)
@@ -291,7 +309,7 @@ describeDb("DB integration security flows (e2e)", () => {
     );
     const stale = await request(app.getHttpServer())
       .post("/payment-channels/prepaid_balance/charge")
-      .set("x-system-id", "itest-system")
+      .set("x-system-id", systemUserId)
       .set("x-signature", staleSignature)
       .set("x-timestamp", staleTimestamp)
       .set("x-nonce", "itest-nonce-stale")

@@ -267,6 +267,7 @@ describeDb("Payment channel idempotency race condition (db integration e2e)", ()
   let prisma: PrismaClient;
   let storyId: string;
   let storyVersionId: string;
+  const systemUserId = "race-system";
   const transactionIds: string[] = [];
 
   beforeAll(async () => {
@@ -284,7 +285,12 @@ describeDb("Payment channel idempotency race condition (db integration e2e)", ()
       .useValue({
         raw: {
           incr: jest.fn().mockResolvedValue(1),
-          expire: jest.fn().mockResolvedValue(1)
+          expire: jest.fn().mockResolvedValue(1),
+          get: jest.fn().mockResolvedValue(null),
+          set: jest.fn().mockResolvedValue("OK"),
+          rpush: jest.fn().mockResolvedValue(1),
+          lpop: jest.fn().mockResolvedValue(null),
+          llen: jest.fn().mockResolvedValue(0)
         },
         getHotRead: jest.fn().mockResolvedValue(null),
         setHotRead: jest.fn().mockResolvedValue(undefined),
@@ -308,6 +314,16 @@ describeDb("Payment channel idempotency race condition (db integration e2e)", ()
     const uid = `${Date.now()}`;
     storyId = randomUUID();
     storyVersionId = randomUUID();
+
+    await prisma.user.upsert({
+      where: { id: systemUserId },
+      update: {},
+      create: {
+        id: systemUserId,
+        username: "race-system",
+        passwordHash: "seeded-system-user-hash"
+      }
+    });
 
     await prisma.story.create({
       data: {
@@ -346,6 +362,7 @@ describeDb("Payment channel idempotency race condition (db integration e2e)", ()
       }
       await prisma.paymentChannelRequest.deleteMany({ where: { idempotencyKey: { startsWith: "race-key-" } } });
       await prisma.story.deleteMany({ where: { id: storyId } });
+      await prisma.user.deleteMany({ where: { id: systemUserId } });
       await prisma.$disconnect();
     }
     await app.close();
@@ -371,7 +388,7 @@ describeDb("Payment channel idempotency race condition (db integration e2e)", ()
 
       return request(app.getHttpServer())
         .post(`/payment-channels/${channel}/charge`)
-        .set("x-system-id", "race-system")
+        .set("x-system-id", systemUserId)
         .set("x-signature", signature)
         .set("x-timestamp", timestamp)
         .set("x-nonce", nonce)
