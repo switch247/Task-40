@@ -53,7 +53,12 @@ Environment flags:
 
 Default deterministic credentials (development/test unless overridden):
 
-- `admin` / `ChangeMeNow123`
-- `editor` / `EditorNow123`
-- `finance_reviewer` / `FinanceNow123`
-- `auditor` / `AuditorNow123`
+
+Seeded user quick reference:
+
+| Username | Role | Password |
+| --- | --- | --- |
+| `admin` | `admin` | `ChangeMeNow123` |
+| `editor` | `editor` | `EditorNow123` |
+| `finance_reviewer` | `finance_reviewer` | `FinanceNow123` |
+| `auditor` | `auditor` | `AuditorNow123` |

@@ -48,6 +48,15 @@ Payment channel signature verification requires all channel secrets to be config
   - `editor` / `EditorNow123`
   - `finance_reviewer` / `FinanceNow123`
   - `auditor` / `AuditorNow123`
+
+Seeded user quick reference:
+
+| Username | Role | Password |
+| --- | --- | --- |
+| `admin` | `admin` | `ChangeMeNow123` |
+| `editor` | `editor` | `EditorNow123` |
+| `finance_reviewer` | `finance_reviewer` | `FinanceNow123` |
+| `auditor` | `auditor` | `AuditorNow123` |
 - Password minimum length: 12
 - Lockout: 5 failed attempts for 15 minutes
 - Session idle timeout: 30 minutes
