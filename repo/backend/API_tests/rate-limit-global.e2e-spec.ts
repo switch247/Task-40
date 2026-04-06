@@ -69,4 +69,38 @@ describe("Global rate limit guard (e2e)", () => {
       .send({ bundleCount: 1, amountCents: 100, storyVersionId: "sv-61" });
     expect(throttled.status).toBe(429);
   });
+
+  it("isolates unauthenticated buckets by client identity so separate IPs do not interfere", async () => {
+    const server = app.getHttpServer();
+
+    for (let i = 1; i <= 60; i++) {
+      const ipA = await request(server)
+        .post("/payment-channels/prepaid_balance/charge")
+        .set("x-forwarded-for", "198.51.100.10")
+        .set("user-agent", "agent-a")
+        .send({ bundleCount: 1, amountCents: 100, storyVersionId: `a-${i}` });
+      expect(ipA.status).toBe(201);
+
+      const ipB = await request(server)
+        .post("/payment-channels/prepaid_balance/charge")
+        .set("x-forwarded-for", "203.0.113.55")
+        .set("user-agent", "agent-b")
+        .send({ bundleCount: 1, amountCents: 100, storyVersionId: `b-${i}` });
+      expect(ipB.status).toBe(201);
+    }
+
+    const overA = await request(server)
+      .post("/payment-channels/prepaid_balance/charge")
+      .set("x-forwarded-for", "198.51.100.10")
+      .set("user-agent", "agent-a")
+      .send({ bundleCount: 1, amountCents: 100, storyVersionId: "a-over" });
+    expect(overA.status).toBe(429);
+
+    const overB = await request(server)
+      .post("/payment-channels/prepaid_balance/charge")
+      .set("x-forwarded-for", "203.0.113.55")
+      .set("user-agent", "agent-b")
+      .send({ bundleCount: 1, amountCents: 100, storyVersionId: "b-over" });
+    expect(overB.status).toBe(429);
+  });
 });

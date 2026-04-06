@@ -71,6 +71,13 @@ describe("Alerts resolve CSRF enforcement (e2e)", () => {
       .set("x-csrf-token", "csrf-invalid");
     expect(invalid.status).toBe(403);
 
+    const valid = await request(server)
+      .patch("/alerts/alert-1/resolve")
+      .set("Cookie", ["sid=sid-good"])
+      .set("x-csrf-token", "csrf-good");
+    expect(valid.status).toBe(200);
+    expect(valid.body.status).toBe("ok");
+
     await app.close();
   }
 

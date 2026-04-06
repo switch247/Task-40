@@ -1,4 +1,5 @@
 import { ConflictException, HttpException, Injectable } from "@nestjs/common";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { TransactionsService } from "../transactions/transactions.service";
@@ -302,6 +303,9 @@ export class PaymentChannelsService {
   }
 
   private isUniqueConstraintError(error: unknown): boolean {
+    if (error instanceof PrismaClientKnownRequestError) {
+      return error.code === "P2002";
+    }
     return typeof error === "object" && error !== null && (error as { code?: string }).code === "P2002";
   }
 }
