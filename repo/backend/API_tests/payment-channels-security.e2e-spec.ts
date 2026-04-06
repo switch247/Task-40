@@ -1,9 +1,13 @@
-import { INestApplication } from "@nestjs/common";
+import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { createHmac } from "crypto";
+import { createHmac, randomUUID } from "crypto";
 import * as request from "supertest";
+import cookieParser = require("cookie-parser");
+import { PrismaClient } from "@prisma/client";
 import { PaymentChannelsV2Controller } from "../src/api/v2/payment-channels-v2.controller";
+import { AppModule } from "../src/app.module";
 import { AuditLogsService } from "../src/modules/audit-logs/audit-logs.service";
+import { RedisService } from "../src/modules/cache/redis.service";
 import { PrismaService } from "../src/modules/prisma/prisma.service";
 import { TransactionsService } from "../src/modules/transactions/transactions.service";
 import { PaymentChannelsService } from "../src/modules/payment-channels/payment-channels.service";
@@ -38,6 +42,9 @@ function sign(channel: string, timestamp: string, nonce: string, idempotencyKey:
   const base = `${channel}|${timestamp}|${nonce}|${idempotencyKey}|${canonicalPayload}`;
   return createHmac("sha256", secret).update(base).digest("hex");
 }
+
+const hasDatabase = Boolean(process.env.DATABASE_URL);
+const describeDb = hasDatabase ? describe : describe.skip;
 
 describe("Payment channel replay/idempotency protections (e2e)", () => {
   let app: INestApplication;
@@ -252,5 +259,141 @@ describe("Payment channel replay/idempotency protections (e2e)", () => {
       .send({ bundleCount: 1, amountCents: 100, storyVersionId: "sv-invalid" });
 
     expect(response.status).toBe(400);
+  });
+});
+
+describeDb("Payment channel idempotency race condition (db integration e2e)", () => {
+  let app: INestApplication;
+  let prisma: PrismaClient;
+  let storyId: string;
+  let storyVersionId: string;
+  const transactionIds: string[] = [];
+
+  beforeAll(async () => {
+    process.env.FIELD_ENCRYPTION_KEY = process.env.FIELD_ENCRYPTION_KEY ?? "test-field-encryption-key";
+    process.env.CHANNEL_SECRET_PREPAID_BALANCE = process.env.CHANNEL_SECRET_PREPAID_BALANCE ?? "prepaid-secret";
+    process.env.CHANNEL_SECRET_INVOICE_CREDIT = process.env.CHANNEL_SECRET_INVOICE_CREDIT ?? "invoice-secret";
+    process.env.CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT = process.env.CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT ?? "po-secret";
+
+    prisma = new PrismaClient();
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule]
+    })
+      .overrideProvider(RedisService)
+      .useValue({
+        raw: {
+          incr: jest.fn().mockResolvedValue(1),
+          expire: jest.fn().mockResolvedValue(1)
+        },
+        getHotRead: jest.fn().mockResolvedValue(null),
+        setHotRead: jest.fn().mockResolvedValue(undefined),
+        del: jest.fn().mockResolvedValue(undefined),
+        delMany: jest.fn().mockResolvedValue(undefined),
+        scanKeys: jest.fn().mockResolvedValue([])
+      })
+      .compile();
+
+    app = moduleRef.createNestApplication();
+    app.use(cookieParser());
+    app.useGlobalPipes(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true
+      })
+    );
+    await app.init();
+
+    const uid = `${Date.now()}`;
+    storyId = randomUUID();
+    storyVersionId = randomUUID();
+
+    await prisma.story.create({
+      data: {
+        id: storyId,
+        source: "wire",
+        canonicalUrl: `https://example.local/race-${uid}`,
+        latestTitle: "Race Story",
+        latestBody: "Race body",
+        versions: {
+          create: {
+            id: storyVersionId,
+            versionNumber: 1,
+            title: "Race Story",
+            body: "Race body",
+            rawUrl: `https://example.local/race-${uid}`,
+            canonicalUrl: `https://example.local/race-${uid}`,
+            source: "wire",
+            contentHash: `race-hash-${uid}`,
+            simhash: "1",
+            minhashSignature: "1,2"
+          }
+        }
+      }
+    });
+  });
+
+  afterAll(async () => {
+    if (hasDatabase) {
+      const txIds = [...new Set(transactionIds)];
+      if (txIds.length > 0) {
+        await prisma.fundLedger.deleteMany({ where: { transactionId: { in: txIds } } });
+        await prisma.refundCase.deleteMany({ where: { transactionId: { in: txIds } } });
+        await prisma.freezeCase.deleteMany({ where: { transactionId: { in: txIds } } });
+        await prisma.paymentChannelRequest.deleteMany({ where: { transactionId: { in: txIds } } });
+        await prisma.transaction.deleteMany({ where: { id: { in: txIds } } });
+      }
+      await prisma.paymentChannelRequest.deleteMany({ where: { idempotencyKey: { startsWith: "race-key-" } } });
+      await prisma.story.deleteMany({ where: { id: storyId } });
+      await prisma.$disconnect();
+    }
+    await app.close();
+  });
+
+  it("returns 1 success and 4 conflicts for concurrent requests sharing one idempotency key with payload drift", async () => {
+    const idem = `race-key-${Date.now()}`;
+    const timestamp = `${Date.now()}`;
+    const channel = "prepaid_balance";
+    const nonceBase = `race-nonce-${Date.now()}`;
+
+    const payloads = [
+      { bundleCount: 1, amountCents: 300, storyVersionId },
+      { bundleCount: 1, amountCents: 301, storyVersionId },
+      { bundleCount: 1, amountCents: 302, storyVersionId },
+      { bundleCount: 1, amountCents: 303, storyVersionId },
+      { bundleCount: 1, amountCents: 304, storyVersionId }
+    ];
+
+    const requestsRun = payloads.map((payload, index) => {
+      const nonce = `${nonceBase}-${index}`;
+      const signature = sign(channel, timestamp, nonce, idem, payload, process.env.CHANNEL_SECRET_PREPAID_BALANCE as string);
+
+      return request(app.getHttpServer())
+        .post(`/payment-channels/${channel}/charge`)
+        .set("x-system-id", "race-system")
+        .set("x-signature", signature)
+        .set("x-timestamp", timestamp)
+        .set("x-nonce", nonce)
+        .set("x-idempotency-key", idem)
+        .send(payload);
+    });
+
+    const results = await Promise.all(requestsRun);
+    const successes = results.filter((response) => response.status === 201);
+    const conflicts = results.filter((response) => response.status === 409);
+
+    expect(successes).toHaveLength(1);
+    expect(conflicts).toHaveLength(4);
+
+    const persisted = await prisma.paymentChannelRequest.findUnique({
+      where: { channel_idempotencyKey: { channel, idempotencyKey: idem } }
+    });
+    expect(persisted).toBeTruthy();
+    expect(persisted?.responseCode).toBe(200);
+
+    if (successes[0]?.body?.transactionId) {
+      transactionIds.push(successes[0].body.transactionId as string);
+    }
   });
 });

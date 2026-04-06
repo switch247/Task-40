@@ -39,6 +39,24 @@ describe("SignatureVerifierService", () => {
     expect(service.isFresh(old)).toBe(false);
   });
 
+  it("accepts timestamps within 299 seconds", () => {
+    const service = new SignatureVerifierService();
+    const withinWindow = `${Date.now() - 299 * 1000}`;
+    expect(service.isFresh(withinWindow)).toBe(true);
+  });
+
+  it("rejects timestamps older than 301 seconds", () => {
+    const service = new SignatureVerifierService();
+    const outsideWindow = `${Date.now() - 301 * 1000}`;
+    expect(service.isFresh(outsideWindow)).toBe(false);
+  });
+
+  it("rejects future timestamps beyond 300 seconds", () => {
+    const service = new SignatureVerifierService();
+    const futureOutsideWindow = `${Date.now() + 301 * 1000}`;
+    expect(service.isFresh(futureOutsideWindow)).toBe(false);
+  });
+
   it("fails config validation when channel secrets are missing", () => {
     delete process.env.CHANNEL_SECRET_PREPAID_BALANCE;
     delete process.env.CHANNEL_SECRET_INVOICE_CREDIT;

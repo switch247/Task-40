@@ -151,11 +151,11 @@ describe("Transactions object authorization (e2e)", () => {
     expect(response.status).toBe(403);
   });
 
-  it("GET /transactions/:id/history returns 200 for finance actor with transactions.read", async () => {
+  it("GET /transactions/:id/history returns 403 for non-owner actor even with transactions.read", async () => {
     const response = await request(app.getHttpServer())
       .get("/transactions/tx-1/history")
       .set("Cookie", ["sid=sid-other"]);
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(403);
   });
 
   it("GET /transactions/:id/history returns 200 for auditor access", async () => {

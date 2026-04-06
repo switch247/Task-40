@@ -9,6 +9,24 @@ import { RedactionInterceptor } from "./common/interceptors/redaction.intercepto
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { cors: false });
+  const expressApp = app.getHttpAdapter().getInstance();
+  const trustProxyEnv = process.env.TRUST_PROXY;
+  if (!trustProxyEnv || trustProxyEnv === "false") {
+    expressApp.set("trust proxy", false);
+  } else if (trustProxyEnv === "true") {
+    expressApp.set("trust proxy", 1);
+  } else if (trustProxyEnv.includes(",")) {
+    expressApp.set(
+      "trust proxy",
+      trustProxyEnv
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    );
+  } else {
+    expressApp.set("trust proxy", trustProxyEnv.trim());
+  }
+
   const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,http://127.0.0.1:5173")
     .split(",")
     .map((value) => value.trim())

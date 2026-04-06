@@ -247,7 +247,7 @@ export class TransactionsService {
       ensureActorObjectAccess(actor, {
         ownerIds: [tx.createdByUserId, tx.approvedByUserId],
         context: "transaction history",
-        allowIfAnyPermission: ["transactions.read", "audit.read", "auditor.release_freeze"],
+        allowIfAnyPermission: ["audit.read", "auditor.release_freeze"],
         allowIfAnyRole: ["auditor"]
       });
 

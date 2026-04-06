@@ -1,6 +1,7 @@
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { Reflector } from "@nestjs/core";
+import { NextFunction, Request, Response } from "express";
 import * as request from "supertest";
 import { PaymentChannelsV1Controller } from "../src/api/v1/payment-channels-v1.controller";
 import { RedisService } from "../src/modules/cache/redis.service";
@@ -46,6 +47,13 @@ describe("Global rate limit guard (e2e)", () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
+    app.use((req: Request, _res: Response, next: NextFunction) => {
+      const testIp = req.headers["x-test-ip"];
+      if (typeof testIp === "string" && testIp.length > 0) {
+        Object.defineProperty(req, "ip", { value: testIp, configurable: true });
+      }
+      next();
+    });
     app.useGlobalGuards(app.get(RateLimitGuard));
     await app.init();
   });
@@ -76,14 +84,14 @@ describe("Global rate limit guard (e2e)", () => {
     for (let i = 1; i <= 60; i++) {
       const ipA = await request(server)
         .post("/payment-channels/prepaid_balance/charge")
-        .set("x-forwarded-for", "198.51.100.10")
+        .set("x-test-ip", "198.51.100.10")
         .set("user-agent", "agent-a")
         .send({ bundleCount: 1, amountCents: 100, storyVersionId: `a-${i}` });
       expect(ipA.status).toBe(201);
 
       const ipB = await request(server)
         .post("/payment-channels/prepaid_balance/charge")
-        .set("x-forwarded-for", "203.0.113.55")
+        .set("x-test-ip", "203.0.113.55")
         .set("user-agent", "agent-b")
         .send({ bundleCount: 1, amountCents: 100, storyVersionId: `b-${i}` });
       expect(ipB.status).toBe(201);
@@ -91,16 +99,39 @@ describe("Global rate limit guard (e2e)", () => {
 
     const overA = await request(server)
       .post("/payment-channels/prepaid_balance/charge")
-      .set("x-forwarded-for", "198.51.100.10")
+      .set("x-test-ip", "198.51.100.10")
       .set("user-agent", "agent-a")
       .send({ bundleCount: 1, amountCents: 100, storyVersionId: "a-over" });
     expect(overA.status).toBe(429);
 
     const overB = await request(server)
       .post("/payment-channels/prepaid_balance/charge")
-      .set("x-forwarded-for", "203.0.113.55")
+      .set("x-test-ip", "203.0.113.55")
       .set("user-agent", "agent-b")
       .send({ bundleCount: 1, amountCents: 100, storyVersionId: "b-over" });
     expect(overB.status).toBe(429);
+  });
+
+  it("ignores spoofed x-forwarded-for values when source IP identity is unchanged", async () => {
+    const server = app.getHttpServer();
+
+    for (let i = 1; i <= 60; i++) {
+      const response = await request(server)
+        .post("/payment-channels/prepaid_balance/charge")
+        .set("x-test-ip", "192.0.2.10")
+        .set("x-forwarded-for", `198.51.100.${i}`)
+        .set("user-agent", "spoof-attempt")
+        .send({ bundleCount: 1, amountCents: 100, storyVersionId: `spoof-${i}` });
+      expect(response.status).toBe(201);
+    }
+
+    const throttled = await request(server)
+      .post("/payment-channels/prepaid_balance/charge")
+      .set("x-test-ip", "192.0.2.10")
+      .set("x-forwarded-for", "203.0.113.250")
+      .set("user-agent", "spoof-attempt")
+      .send({ bundleCount: 1, amountCents: 100, storyVersionId: "spoof-61" });
+
+    expect(throttled.status).toBe(429);
   });
 });
