@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { ApiV1Module } from "./api/v1/api-v1.module";
 import { ApiV2Module } from "./api/v2/api-v2.module";
@@ -25,6 +26,7 @@ import { StoryVersionsModule } from "./modules/story-versions/story-versions.mod
 import { TransactionsModule } from "./modules/transactions/transactions.module";
 import { UsersModule } from "./modules/users/users.module";
 import { SecurityModule } from "./security/security.module";
+import { RateLimitGuard } from "./modules/rate-limit/rate-limit.guard";
 
 @Module({
   imports: [
@@ -54,6 +56,12 @@ import { SecurityModule } from "./security/security.module";
     HealthModule,
     ApiV1Module,
     ApiV2Module
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: RateLimitGuard
+    }
   ]
 })
 export class AppModule {}

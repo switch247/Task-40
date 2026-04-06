@@ -9,7 +9,6 @@ import { FieldEncryptionService } from "../../security/crypto/field-encryption.s
 import { VerifyTotpDto } from "../../security/mfa/dto/verify-totp.dto";
 import { MfaService } from "../../security/mfa/mfa.service";
 import { PrismaService } from "../../modules/prisma/prisma.service";
-import { RateLimitGuard } from "../../modules/rate-limit/rate-limit.guard";
 import { AuthService } from "../../security/auth/auth.service";
 import { LoginDto } from "../../security/auth/dto/login.dto";
 import { resolveSessionCookieOptions } from "../../security/auth/session-cookie.util";
@@ -18,7 +17,6 @@ import { CsrfGuard } from "../../security/csrf/csrf.guard";
 
 @ApiTags("auth-v2")
 @Controller("auth")
-@UseGuards(RateLimitGuard)
 export class AuthV2Controller {
   private readonly sessionCookieOptions = resolveSessionCookieOptions();
 

@@ -105,4 +105,38 @@ describe("AuthService seeded credential hardening", () => {
 
     expect(tx.user.create).not.toHaveBeenCalled();
   });
+
+  it("allows deterministic seeded user creation in non-dev when ENABLE_SEEDING=true", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.ENABLE_SEEDING = "true";
+    delete process.env.ALLOW_DETERMINISTIC_SEED_CREDENTIALS;
+
+    const tx = {
+      permission: {
+        upsert: jest.fn().mockImplementation(async ({ where }: { where: { key: string } }) => ({ id: `perm-${where.key}` }))
+      },
+      role: {
+        upsert: jest.fn().mockImplementation(async ({ where }: { where: { name: string } }) => ({ id: `role-${where.name}` }))
+      },
+      rolePermission: {
+        upsert: jest.fn().mockResolvedValue(undefined)
+      },
+      user: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: "seed-admin" })
+      },
+      userRole: {
+        upsert: jest.fn().mockResolvedValue(undefined)
+      }
+    } as any;
+
+    const prisma = {
+      $transaction: jest.fn().mockImplementation(async (callback: (input: any) => Promise<void>) => callback(tx))
+    } as any;
+
+    const service = new AuthService(prisma, {} as any, {} as any, {} as any);
+    await service.registerSeedUser();
+
+    expect(tx.user.create).toHaveBeenCalled();
+  });
 });

@@ -25,6 +25,8 @@ services:
       - postgres
       - redis
     environment:
+      NODE_ENV: development
+      ENABLE_SEEDING: "true"
       CHANNEL_SECRET_PREPAID_BALANCE: dev-prepaid-channel-secret
       CHANNEL_SECRET_INVOICE_CREDIT: dev-invoice-channel-secret
       CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT: dev-po-channel-secret

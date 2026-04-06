@@ -5,6 +5,7 @@ import { PermissionGuard } from "../../common/guards/permission.guard";
 import { SessionGuard } from "../../common/guards/session.guard";
 import { JobsService } from "../../modules/jobs/jobs.service";
 import { PrismaService } from "../../modules/prisma/prisma.service";
+import { CsrfGuard } from "../../security/csrf/csrf.guard";
 
 @ApiTags("alerts-v1")
 @Controller("alerts")
@@ -42,6 +43,7 @@ export class AlertsV1Controller {
 
   @Patch(":id/resolve")
   @Version("1")
+  @UseGuards(CsrfGuard)
   async resolve(@Param("id") alertId: string) {
     const updated = await this.prisma.alertEvent.update({
       where: { id: alertId },

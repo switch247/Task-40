@@ -3,6 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { RedisService } from "../cache/redis.service";
 import { JobsService } from "../jobs/jobs.service";
 import { ObservabilityService } from "../observability/observability.service";
+import { SkipThrottle } from "../rate-limit/skip-throttle.decorator";
 
 @Controller("health")
 export class HealthController {
@@ -15,6 +16,7 @@ export class HealthController {
 
   @Get()
   @Version(["1", "2"])
+  @SkipThrottle()
   async readiness(): Promise<Record<string, unknown>> {
     await this.prisma.$queryRaw`SELECT 1`;
     await this.redis.raw.ping();
@@ -29,6 +31,7 @@ export class HealthController {
 
   @Get("summary")
   @Version(["1", "2"])
+  @SkipThrottle()
   async summary(): Promise<Record<string, unknown>> {
     await this.prisma.$queryRaw`SELECT 1`;
     await this.redis.raw.ping();

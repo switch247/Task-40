@@ -80,4 +80,22 @@ describe("SignatureVerifierService", () => {
     });
     expect(bad.valid).toBe(false);
   });
+
+  it("throws bad request for unknown channel values", () => {
+    process.env.CHANNEL_SECRET_PREPAID_BALANCE = "prepaid-local-secret";
+    process.env.CHANNEL_SECRET_INVOICE_CREDIT = "invoice-local-secret";
+    process.env.CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT = "po-local-secret";
+    const service = new SignatureVerifierService();
+
+    expect(() =>
+      service.verify({
+        channel: "invalid_channel" as any,
+        timestamp: `${Date.now()}`,
+        nonce: "n-unknown",
+        idempotencyKey: "idem-unknown",
+        signature: "x",
+        payload: {}
+      })
+    ).toThrow(/Unknown payment channel/);
+  });
 });

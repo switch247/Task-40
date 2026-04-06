@@ -1,11 +1,10 @@
-import { HttpException, Injectable } from "@nestjs/common";
+import { ConflictException, HttpException, Injectable } from "@nestjs/common";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { TransactionsService } from "../transactions/transactions.service";
 import { ChannelChargeDto } from "./dto/channel-charge.dto";
 import { SignatureVerifierService } from "../../security/signatures/signature-verifier.service";
-
-type Channel = "prepaid_balance" | "invoice_credit" | "purchase_order_settlement";
+import { PaymentChannel } from "./payment-channel.enum";
 
 @Injectable()
 export class PaymentChannelsService {
@@ -17,7 +16,7 @@ export class PaymentChannelsService {
   ) {}
 
   async processSignedCharge(input: {
-    channel: Channel;
+    channel: PaymentChannel;
     payload: ChannelChargeDto;
     systemIdentity: string;
     signature: string;
@@ -34,14 +33,7 @@ export class PaymentChannelsService {
       payload: input.payload
     });
 
-    const duplicate = await this.prisma.paymentChannelRequest.findUnique({
-      where: {
-        channel_idempotencyKey: {
-          channel: input.channel,
-          idempotencyKey: input.idempotencyKey
-        }
-      }
-    });
+    const duplicate = await this.findByIdempotency(input.channel, input.idempotencyKey);
 
     if (duplicate) {
       if (duplicate.payloadHash !== verification.payloadHash) {
@@ -141,27 +133,56 @@ export class PaymentChannelsService {
       idempotencyKey: input.idempotencyKey
     });
 
-    const request = await this.prisma.paymentChannelRequest.create({
-      data: {
-        channel: input.channel,
-        operation: "CHARGE_POST",
-        systemIdentity: input.systemIdentity,
-        idempotencyKey: input.idempotencyKey,
-        nonce: input.nonce,
-        requestTimestamp: this.signatures.parseTimestamp(input.timestamp),
-        payloadHash: verification.payloadHash,
-        signature: input.signature,
-        verificationStatus: "VERIFIED",
-        duplicateDetected: false,
-        replayDetected: false,
-        transactionId: transaction.id,
-        responseCode: 200,
-        responseBody: {
+    let request;
+    try {
+      request = await this.prisma.paymentChannelRequest.create({
+        data: {
+          channel: input.channel,
+          operation: "CHARGE_POST",
+          systemIdentity: input.systemIdentity,
+          idempotencyKey: input.idempotencyKey,
+          nonce: input.nonce,
+          requestTimestamp: this.signatures.parseTimestamp(input.timestamp),
+          payloadHash: verification.payloadHash,
+          signature: input.signature,
+          verificationStatus: "VERIFIED",
+          duplicateDetected: false,
+          replayDetected: false,
           transactionId: transaction.id,
-          status: "APPROVED"
+          responseCode: 200,
+          responseBody: {
+            transactionId: transaction.id,
+            status: "APPROVED"
+          }
         }
+      });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
       }
-    });
+
+      const existing = await this.findByIdempotency(input.channel, input.idempotencyKey);
+      if (!existing) {
+        throw new ConflictException({
+          reason: "IDEMPOTENCY_KEY_ALREADY_EXISTS",
+          code: 409
+        });
+      }
+
+      if (existing.payloadHash !== verification.payloadHash) {
+        throw new ConflictException({
+          reason: "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD",
+          code: 409
+        });
+      }
+
+      return {
+        status: "ok",
+        idempotent: true,
+        transactionId: existing.transactionId,
+        reason: "Duplicate callback ignored; original result returned."
+      };
+    }
 
     await this.auditLogs.write({
       userId: input.systemIdentity,
@@ -188,7 +209,7 @@ export class PaymentChannelsService {
 
   private async reject(
     data: {
-      channel: Channel;
+      channel: PaymentChannel;
       payloadHash: string;
       systemIdentity: string;
       idempotencyKey: string;
@@ -203,27 +224,48 @@ export class PaymentChannelsService {
     },
     responseCode: number
   ) {
-    const request = await this.prisma.paymentChannelRequest.create({
-      data: {
-        channel: data.channel,
-        operation: "CHARGE_POST",
-        systemIdentity: data.systemIdentity,
-        idempotencyKey: data.idempotencyKey,
-        nonce: data.nonce,
-        requestTimestamp: this.signatures.parseTimestamp(data.timestamp),
-        payloadHash: data.payloadHash,
-        signature: data.signature,
-        verificationStatus: data.verificationStatus,
-        rejectionReason: data.rejectionReason,
-        duplicateDetected: data.duplicateDetected,
-        replayDetected: data.replayDetected,
-        transactionId: data.transactionId ?? undefined,
-        responseCode,
-        responseBody: {
-          reason: data.rejectionReason
+    const existing = await this.findByIdempotency(data.channel, data.idempotencyKey);
+    if (existing) {
+      throw new ConflictException({
+        reason: data.rejectionReason,
+        code: 409,
+        existingRequestId: existing.id,
+        transactionId: existing.transactionId ?? null
+      });
+    }
+
+    let request;
+    try {
+      request = await this.prisma.paymentChannelRequest.create({
+        data: {
+          channel: data.channel,
+          operation: "CHARGE_POST",
+          systemIdentity: data.systemIdentity,
+          idempotencyKey: data.idempotencyKey,
+          nonce: data.nonce,
+          requestTimestamp: this.signatures.parseTimestamp(data.timestamp),
+          payloadHash: data.payloadHash,
+          signature: data.signature,
+          verificationStatus: data.verificationStatus,
+          rejectionReason: data.rejectionReason,
+          duplicateDetected: data.duplicateDetected,
+          replayDetected: data.replayDetected,
+          transactionId: data.transactionId ?? undefined,
+          responseCode,
+          responseBody: {
+            reason: data.rejectionReason
+          }
         }
+      });
+    } catch (error) {
+      if (this.isUniqueConstraintError(error)) {
+        throw new ConflictException({
+          reason: data.rejectionReason,
+          code: 409
+        });
       }
-    });
+      throw error;
+    }
 
     await this.auditLogs.write({
       userId: data.systemIdentity,
@@ -246,5 +288,20 @@ export class PaymentChannelsService {
       reason: data.rejectionReason,
       code: responseCode
     }, responseCode);
+  }
+
+  private async findByIdempotency(channel: PaymentChannel, idempotencyKey: string) {
+    return this.prisma.paymentChannelRequest.findUnique({
+      where: {
+        channel_idempotencyKey: {
+          channel,
+          idempotencyKey
+        }
+      }
+    });
+  }
+
+  private isUniqueConstraintError(error: unknown): boolean {
+    return typeof error === "object" && error !== null && (error as { code?: string }).code === "P2002";
   }
 }

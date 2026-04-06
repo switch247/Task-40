@@ -10,7 +10,7 @@ SentinelDesk is an on-prem, offline-capable newsroom platform with local auth, v
 
 ## One-Command Startup
 
-Run the full stack with one command from `fullstack/`:
+Run the full stack with one command from the project root (`repo/`):
 
 ```bash
 docker compose up --build
@@ -40,7 +40,8 @@ Payment channel signature verification requires all channel secrets to be config
 - In `development` and `test`, deterministic seed credentials are enabled for local usability.
 - In non-development environments, deterministic seeded passwords are disabled by default.
 - Optional override flags (use only when explicitly needed):
-  - `ALLOW_DETERMINISTIC_SEED_CREDENTIALS=true` (allow deterministic user creation)
+  - `ENABLE_SEEDING=true` (allow deterministic user creation outside development/test)
+  - `ALLOW_DETERMINISTIC_SEED_CREDENTIALS=true` (legacy alias for deterministic user creation)
   - `ALLOW_DEFAULT_SEED_PASSWORD_LOGIN=true` (temporarily allow login with known default seeded passwords)
 - Default seeded username/password pairs (development/test only unless overrides are enabled):
   - `admin` / `ChangeMeNow123`
@@ -73,7 +74,7 @@ Covered major paths include:
 
 ## One-Click Test Runner
 
-Run all tests with a single command from `fullstack/`:
+Run all tests with a single command from the project root (`repo/`):
 
 ```bash
 sh ./run_tests.sh

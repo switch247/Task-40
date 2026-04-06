@@ -6,6 +6,7 @@ import { LedgerService } from "../ledger/ledger.service";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CreateChargeDto } from "./dto/create-charge.dto";
 import { ApproveChargeDto } from "./dto/approve-charge.dto";
+import { PaymentChannel } from "../payment-channels/payment-channel.enum";
 
 @Injectable()
 export class TransactionsService {
@@ -67,7 +68,7 @@ export class TransactionsService {
   }
 
   async postApprovedChargeFromChannel(input: {
-    channel: "prepaid_balance" | "invoice_credit" | "purchase_order_settlement";
+    channel: PaymentChannel;
     systemIdentity: string;
     bundleCount: number;
     amountCents?: number;

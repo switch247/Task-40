@@ -1,7 +1,6 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { createHmac, timingSafeEqual } from "crypto";
-
-type Channel = "prepaid_balance" | "invoice_credit" | "purchase_order_settlement";
+import { PaymentChannel } from "../../modules/payment-channels/payment-channel.enum";
 
 @Injectable()
 export class SignatureVerifierService {
@@ -18,7 +17,7 @@ export class SignatureVerifierService {
   }
 
   verify(input: {
-    channel: Channel;
+    channel: string;
     timestamp: string;
     nonce: string;
     idempotencyKey: string;
@@ -52,19 +51,23 @@ export class SignatureVerifierService {
     return Number.isFinite(time) ? new Date(time) : new Date();
   }
 
-  private secretFor(channel: Channel): string {
+  private secretFor(channel: string): string {
     const secrets = Object.fromEntries(this.requiredSecretEntries()) as Record<string, string | undefined>;
 
-    if (channel === "prepaid_balance") {
+    if (channel === PaymentChannel.PREPAID_BALANCE) {
       return this.requiredSecret("CHANNEL_SECRET_PREPAID_BALANCE", secrets.CHANNEL_SECRET_PREPAID_BALANCE);
     }
-    if (channel === "invoice_credit") {
+    if (channel === PaymentChannel.INVOICE_CREDIT) {
       return this.requiredSecret("CHANNEL_SECRET_INVOICE_CREDIT", secrets.CHANNEL_SECRET_INVOICE_CREDIT);
     }
-    return this.requiredSecret(
-      "CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT",
-      secrets.CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT
-    );
+    if (channel === PaymentChannel.PURCHASE_ORDER_SETTLEMENT) {
+      return this.requiredSecret(
+        "CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT",
+        secrets.CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT
+      );
+    }
+
+    throw new BadRequestException(`Unknown payment channel: ${String(channel)}`);
   }
 
   private requiredSecretEntries(): Array<[string, string | undefined]> {

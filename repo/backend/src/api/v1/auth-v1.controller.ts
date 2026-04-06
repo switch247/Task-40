@@ -15,7 +15,6 @@ import { createHash } from "crypto";
 import { PermissionGuard } from "../../common/guards/permission.guard";
 import { AuditLogsService } from "../../modules/audit-logs/audit-logs.service";
 import { SessionGuard } from "../../common/guards/session.guard";
-import { RateLimitGuard } from "../../modules/rate-limit/rate-limit.guard";
 import { AuthService } from "../../security/auth/auth.service";
 import { LoginDto } from "../../security/auth/dto/login.dto";
 import { resolveSessionCookieOptions } from "../../security/auth/session-cookie.util";
@@ -28,7 +27,6 @@ import { PrismaService } from "../../modules/prisma/prisma.service";
 
 @ApiTags("auth-v1")
 @Controller("auth")
-@UseGuards(RateLimitGuard)
 export class AuthV1Controller {
   private readonly sessionCookieOptions = resolveSessionCookieOptions();
 

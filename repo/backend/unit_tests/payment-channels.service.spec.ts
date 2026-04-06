@@ -1,4 +1,4 @@
-import { HttpException } from "@nestjs/common";
+import { ConflictException } from "@nestjs/common";
 import { PaymentChannelsService } from "../src/modules/payment-channels/payment-channels.service";
 
 describe("PaymentChannelsService", () => {
@@ -38,6 +38,7 @@ describe("PaymentChannelsService", () => {
   });
 
   it("rejects duplicate idempotency key with mutated payload", async () => {
+    const create = jest.fn().mockResolvedValue({ id: "req2" });
     const prisma = {
       paymentChannelRequest: {
         findUnique: jest.fn().mockResolvedValue({
@@ -46,7 +47,7 @@ describe("PaymentChannelsService", () => {
           verificationStatus: "VERIFIED",
           transactionId: "tx1"
         }),
-        create: jest.fn().mockResolvedValue({ id: "req2" })
+        create
       }
     } as any;
     const signatures = {
@@ -70,6 +71,7 @@ describe("PaymentChannelsService", () => {
         nonce: "n1",
         idempotencyKey: "k1"
       } as any)
-    ).rejects.toBeInstanceOf(HttpException);
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(create).not.toHaveBeenCalled();
   });
 });

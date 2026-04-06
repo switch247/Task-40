@@ -43,11 +43,34 @@ describe("Payment channel replay/idempotency protections (e2e)", () => {
   let app: INestApplication;
   const requests: StoredRequest[] = [];
   let txCounter = 1;
+  let createSpy: jest.Mock;
 
   beforeAll(async () => {
     process.env.CHANNEL_SECRET_PREPAID_BALANCE = "prepaid-secret";
     process.env.CHANNEL_SECRET_INVOICE_CREDIT = "invoice-secret";
     process.env.CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT = "po-secret";
+
+    createSpy = jest.fn().mockImplementation(({ data }: any) => {
+      const duplicate = requests.find(
+        (item) => item.channel === data.channel && item.idempotencyKey === data.idempotencyKey
+      );
+      if (duplicate) {
+        throw { code: "P2002" };
+      }
+      const created: StoredRequest = {
+        id: `req-${requests.length + 1}`,
+        channel: data.channel,
+        idempotencyKey: data.idempotencyKey,
+        nonce: data.nonce,
+        payloadHash: data.payloadHash,
+        verificationStatus: data.verificationStatus,
+        transactionId: data.transactionId ?? null,
+        rejectionReason: data.rejectionReason,
+        createdAt: new Date()
+      };
+      requests.push(created);
+      return created;
+    });
 
     const moduleRef = await Test.createTestingModule({
       controllers: [PaymentChannelsV2Controller],
@@ -79,21 +102,7 @@ describe("Payment channel replay/idempotency protections (e2e)", () => {
               findFirst: jest.fn().mockImplementation(({ where: { channel, nonce } }: any) => {
                 return requests.find((item) => item.channel === channel && item.nonce === nonce) ?? null;
               }),
-              create: jest.fn().mockImplementation(({ data }: any) => {
-                const created: StoredRequest = {
-                  id: `req-${requests.length + 1}`,
-                  channel: data.channel,
-                  idempotencyKey: data.idempotencyKey,
-                  nonce: data.nonce,
-                  payloadHash: data.payloadHash,
-                  verificationStatus: data.verificationStatus,
-                  transactionId: data.transactionId ?? null,
-                  rejectionReason: data.rejectionReason,
-                  createdAt: new Date()
-                };
-                requests.push(created);
-                return created;
-              })
+              create: createSpy
             }
           }
         },
@@ -147,17 +156,18 @@ describe("Payment channel replay/idempotency protections (e2e)", () => {
     const originalPayload = { bundleCount: 1, amountCents: 300, storyVersionId: "sv-2" };
     const timestamp = `${Date.now()}`;
     const nonce = "nonce-2";
-    const idempotencyKey = "key-2";
-    const originalSig = sign("prepaid_balance", timestamp, nonce, idempotencyKey, originalPayload, "prepaid-secret");
-
-    await request(app.getHttpServer())
-      .post("/payment-channels/prepaid_balance/charge")
-      .set("x-system-id", "system-a")
-      .set("x-signature", originalSig)
-      .set("x-timestamp", timestamp)
-      .set("x-nonce", nonce)
-      .set("x-idempotency-key", idempotencyKey)
-      .send(originalPayload);
+    const idempotencyKey = "key-preexisting";
+    const canonicalOriginal = stableStringify(originalPayload);
+    requests.push({
+      id: "req-preexisting",
+      channel: "prepaid_balance",
+      idempotencyKey,
+      nonce: "nonce-preexisting",
+      payloadHash: createHmac("sha256", "payload-hash").update(canonicalOriginal).digest("hex"),
+      verificationStatus: "VERIFIED",
+      transactionId: "tx-preexisting",
+      createdAt: new Date()
+    });
 
     const mutatedPayload = { ...originalPayload, amountCents: 999 };
     const mutatedSig = sign("prepaid_balance", timestamp, nonce, idempotencyKey, mutatedPayload, "prepaid-secret");
@@ -173,6 +183,14 @@ describe("Payment channel replay/idempotency protections (e2e)", () => {
 
     expect(response.status).toBe(409);
     expect(response.body.reason).toBe("IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD");
+    expect(createSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          channel: "prepaid_balance",
+          idempotencyKey
+        })
+      })
+    );
   });
 
   it("rejects replayed nonce and stale timestamp", async () => {
@@ -221,5 +239,18 @@ describe("Payment channel replay/idempotency protections (e2e)", () => {
 
     expect(staleResponse.status).toBe(401);
     expect(staleResponse.body.reason).toBe("REPLAY_WINDOW_EXCEEDED_5_MINUTES");
+  });
+
+  it("rejects invalid channel path parameter with 400", async () => {
+    const response = await request(app.getHttpServer())
+      .post("/payment-channels/invalid_channel/charge")
+      .set("x-system-id", "system-a")
+      .set("x-signature", "sig")
+      .set("x-timestamp", `${Date.now()}`)
+      .set("x-nonce", "nonce-invalid")
+      .set("x-idempotency-key", "key-invalid")
+      .send({ bundleCount: 1, amountCents: 100, storyVersionId: "sv-invalid" });
+
+    expect(response.status).toBe(400);
   });
 });

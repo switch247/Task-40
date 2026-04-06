@@ -4,7 +4,7 @@ NestJS service with versioned APIs under `/api/v1` and `/api/v2`, local OpenAPI 
 
 ## Run with Docker (recommended)
 
-From `fullstack/`:
+From the project root (`repo/`):
 
 ```bash
 docker compose up --build
@@ -44,8 +44,10 @@ On startup, the backend always seeds roles/permissions. Deterministic seeded use
 
 Environment flags:
 
-- `ALLOW_DETERMINISTIC_SEED_CREDENTIALS=true`  
+- `ENABLE_SEEDING=true`  
   Allows deterministic seeded user creation in non-development environments.
+- `ALLOW_DETERMINISTIC_SEED_CREDENTIALS=true`  
+  Legacy alias that also allows deterministic seeded user creation in non-development environments.
 - `ALLOW_DEFAULT_SEED_PASSWORD_LOGIN=true`  
   Allows login with known default seeded passwords in non-development environments.
 

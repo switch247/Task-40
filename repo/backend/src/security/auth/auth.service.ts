@@ -23,6 +23,9 @@ function deterministicSeedCredentialsAllowed(): boolean {
   if (isLocalDevelopmentMode()) {
     return true;
   }
+  if (process.env.ENABLE_SEEDING === "true") {
+    return true;
+  }
   return process.env.ALLOW_DETERMINISTIC_SEED_CREDENTIALS === "true";
 }
 
