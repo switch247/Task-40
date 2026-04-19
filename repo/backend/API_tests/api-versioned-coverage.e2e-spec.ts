@@ -5,7 +5,6 @@ import * as request from "supertest";
 import cookieParser = require("cookie-parser");
 import { PrismaClient } from "@prisma/client";
 import { AppModule } from "../src/app.module";
-import { RedisService } from "../src/modules/cache/redis.service";
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 const describeDb = hasDatabase ? describe : describe.skip;
@@ -24,31 +23,6 @@ function signChannelPayload(
   const base = `${channel}|${timestamp}|${nonce}|${idempotencyKey}|${stableStringify(payload)}`;
   return createHmac("sha256", secret).update(base).digest("hex");
 }
-
-const csrfStore: Record<string, string> = {};
-const redisStub = {
-  raw: {
-    ping: jest.fn().mockResolvedValue("PONG"),
-    incr: jest.fn().mockResolvedValue(1),
-    expire: jest.fn().mockResolvedValue(1),
-    get: jest.fn().mockImplementation(async (key: string) => {
-      if (key.startsWith("csrf:")) return csrfStore[key] ?? null;
-      return null;
-    }),
-    set: jest.fn().mockImplementation(async (key: string, value: string) => {
-      if (key.startsWith("csrf:")) csrfStore[key] = value;
-      return "OK";
-    }),
-    rpush: jest.fn().mockResolvedValue(1),
-    lpop: jest.fn().mockResolvedValue(null),
-    llen: jest.fn().mockResolvedValue(0)
-  },
-  getHotRead: jest.fn().mockResolvedValue(null),
-  setHotRead: jest.fn().mockResolvedValue(undefined),
-  del: jest.fn().mockResolvedValue(undefined),
-  delMany: jest.fn().mockResolvedValue(undefined),
-  scanKeys: jest.fn().mockResolvedValue([])
-};
 
 describeDb("All versioned API endpoints – /api/v{N}/... strict coverage", () => {
   let app: INestApplication;
@@ -118,8 +92,6 @@ describeDb("All versioned API endpoints – /api/v{N}/... strict coverage", () =
     });
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(RedisService)
-      .useValue(redisStub)
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -738,6 +710,85 @@ describeDb("All versioned API endpoints – /api/v{N}/... strict coverage", () =
         .set("x-csrf-token", auditor.csrf)
         .send({ note: "vcov release test note here" });
       expect([201, 400, 409]).toContain(res.status);
+    });
+
+    // ── SECURITY ISOLATION ──────────────────────────────────────────────────
+
+    it(`editor cannot access admin endpoints at /api/${ver}`, async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/${ver}/admin/overview`)
+        .set("Cookie", [editor.cookie]);
+      expect(res.status).toBe(403);
+    });
+
+    it(`finance_reviewer cannot access admin endpoints at /api/${ver}`, async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/${ver}/admin/overview`)
+        .set("Cookie", [finance.cookie]);
+      expect(res.status).toBe(403);
+    });
+
+    it(`auditor cannot perform admin role changes at /api/${ver}`, async () => {
+      const auditCsrf = await rotateCsrf(ver, auditor.cookie);
+      const res = await request(app.getHttpServer())
+        .put(`/api/${ver}/admin/roles`)
+        .set("Cookie", [auditor.cookie])
+        .set("x-csrf-token", auditCsrf)
+        .send({ name: "vcov-isolation-role", permissionKeys: [], changeNote: "isolation test attempt" });
+      expect(res.status).toBe(403);
+    });
+
+    it(`editor cannot access transaction history (role-level isolation) at /api/${ver}`, async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/${ver}/transactions/${txId}/history`)
+        .set("Cookie", [editor.cookie]);
+      expect(res.status).toBe(403);
+    });
+
+    it(`editor cannot create charges (role-level isolation) at /api/${ver}`, async () => {
+      const editorCsrf = await rotateCsrf(ver, editor.cookie);
+      const res = await request(app.getHttpServer())
+        .post(`/api/${ver}/transactions/charges`)
+        .set("Cookie", [editor.cookie])
+        .set("x-csrf-token", editorCsrf)
+        .send({ storyVersionId, channel: "prepaid_balance", bundleCount: 1 });
+      expect(res.status).toBe(403);
+    });
+
+    it(`finance_reviewer cannot access editor-queue (role-level isolation) at /api/${ver}`, async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/${ver}/editor-queue`)
+        .set("Cookie", [finance.cookie]);
+      expect(res.status).toBe(403);
+    });
+
+    it(`finance_reviewer cannot access audit reports (role-level isolation) at /api/${ver}`, async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/${ver}/reports/audit`)
+        .set("Cookie", [finance.cookie]);
+      expect(res.status).toBe(403);
+    });
+
+    it(`health endpoints are publicly accessible without auth at /api/${ver}`, async () => {
+      const health = await request(app.getHttpServer()).get(`/api/${ver}/health`);
+      expect(health.status).toBe(200);
+      const summary = await request(app.getHttpServer()).get(`/api/${ver}/health/summary`);
+      expect(summary.status).toBe(200);
+    });
+
+    it(`unauthenticated request cannot access any protected endpoint at /api/${ver}`, async () => {
+      const endpoints = [
+        { method: "get", path: `/api/${ver}/admin/overview` },
+        { method: "get", path: `/api/${ver}/transactions` },
+        { method: "get", path: `/api/${ver}/reports/audit` },
+        { method: "get", path: `/api/${ver}/alerts/dashboard` },
+        { method: "get", path: `/api/${ver}/editor-queue` },
+        { method: "get", path: `/api/${ver}/profile/sensitive` }
+      ];
+      for (const ep of endpoints) {
+        const res = await (request(app.getHttpServer()) as any)[ep.method](ep.path);
+        expect(res.status).toBe(401);
+      }
     });
   }
 
