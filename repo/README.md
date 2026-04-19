@@ -4,9 +4,23 @@ SentinelDesk is an on-prem, offline-capable newsroom platform with local auth, v
 
 ## Architecture
 
-- `frontend/` - React + TypeScript web console
-- `backend/` - NestJS + TypeScript API
-- `docker-compose.yml` - PostgreSQL + Redis + backend + frontend
+```
+┌─────────────────────┐     HTTP/API      ┌──────────────────────┐
+│  React + TypeScript │ ──────────────▶  │  NestJS + TypeScript  │
+│  frontend/          │   (port 5173)     │  backend/  (port 3000)│
+└─────────────────────┘                   └──────────┬───────────┘
+                                                      │
+                                          ┌───────────┴───────────┐
+                                          │                       │
+                                   ┌──────▼──────┐    ┌──────────▼───┐
+                                   │ PostgreSQL  │    │    Redis     │
+                                   │ (port 5432) │    │ (port 6379)  │
+                                   └─────────────┘    └──────────────┘
+```
+
+- `frontend/` - React + TypeScript web console (Vite, React Router, Vitest + Playwright)
+- `backend/` - NestJS + TypeScript API (Prisma ORM, JWT-free session cookies, CSRF protection)
+- `docker-compose.yml` - PostgreSQL + Redis + backend + frontend in a single compose file
 
 ## One-Command Startup
 
@@ -57,6 +71,7 @@ Seeded user quick reference:
 | `editor` | `editor` | `EditorNow123` |
 | `finance_reviewer` | `finance_reviewer` | `FinanceNow123` |
 | `auditor` | `auditor` | `AuditorNow123` |
+
 - Password minimum length: 12
 - Lockout: 5 failed attempts for 15 minutes
 - Session idle timeout: 30 minutes
@@ -66,12 +81,14 @@ Seeded user quick reference:
 ## Mandatory Test Layout
 
 - Core business logic tests: `backend/unit_tests/`
-- Endpoint behavior tests: `backend/API_tests/`
+- Endpoint behavior tests (true no-mock, real DB): `backend/API_tests/`
+- Frontend unit/integration tests: `frontend/tests/`
+- Frontend browser E2E tests (Playwright): `frontend/e2e/`
 
 Covered major paths include:
 
 - auth/lockout/session/MFA
-- ingestion parsing
+- ingestion parsing, URL batch, file upload
 - dedup/fingerprint behavior
 - merge mandatory note + strategies
 - transaction/refund constraints
@@ -79,7 +96,12 @@ Covered major paths include:
 - signed channel verification/replay/idempotency
 - role masking/redaction
 - per-user rate limiting
-- audit report CSV export
+- audit report search and CSV export
+- admin overview, roles, rate-limit, and threshold management
+- alerts dashboard and alert resolution
+- sensitive profile encryption/decryption
+- frontend route permission enforcement (all roles)
+- frontend editor, audit, admin, alerts, security, and transactions workflows
 
 ## One-Click Test Runner
 
@@ -124,18 +146,30 @@ npm run verify:standard
 ## Verification Procedure
 
 1. Start stack: `docker compose up --build`
-2. Verify health:
-   - `GET http://localhost:3000/api/v1/health`
-   - `GET http://localhost:3000/api/v1/health/summary`
-3. Verify OpenAPI:
+
+2. Verify backend health — both should return `{"status":"ok"}`:
+   ```bash
+   curl http://localhost:3000/api/v1/health
+   curl http://localhost:3000/api/v1/health/summary
+   ```
+
+3. Verify OpenAPI docs load (open in browser or curl for 200):
    - `http://localhost:3000/openapi/v1`
    - `http://localhost:3000/openapi/v2`
-4. Login with seeded users and verify role-based workspace visibility:
-   - `admin` sees Editor Queue, Transactions, Admin, Audit Reports, Alerts Dashboard, and Security
-   - `editor` sees Ingestion, Editor Queue, and Security
-   - `finance_reviewer` sees Transactions and Security
-   - `auditor` sees Transactions, Audit Reports, and Security
-5. Run tests: `npm run test:all`
+
+4. Verify frontend loads at `http://localhost:5173` — you should see the SentinelDesk Login page.
+
+5. Verify role-based workspace visibility by logging in with each seeded user at `http://localhost:5173`:
+   - `admin` → sees Admin Workspace, Editor Queue, Transactions, Audit Reports, Alerts Dashboard, and Security
+   - `editor` → sees Ingestion Workspace, Editor Queue, and Security
+   - `finance_reviewer` → sees Transactions Workspace and Security
+   - `auditor` → sees Transactions Workspace, Audit Reports, and Security
+
+6. Run the full test suite and confirm all suites pass:
+   ```bash
+   npm run test:all
+   ```
+   Expected output ends with `total=<n> pass=<n> fail=0`.
 
 ## Operations: Jobs, Backup, Retention
 

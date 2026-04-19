@@ -42,6 +42,10 @@ wait_for_backend
 echo "[backend] npm test (unit) via docker exec"
 $COMPOSE exec -T backend sh -lc 'unset ENABLE_SEEDING ALLOW_DETERMINISTIC_SEED_CREDENTIALS; npm run test'
 
+
+# Ensure backend container has ENABLE_SEEDING=true for smart seeding
+$COMPOSE exec -T backend sh -lc 'export ENABLE_SEEDING=true; unset ALLOW_DETERMINISTIC_SEED_CREDENTIALS; npm run test'
+
 echo "[backend] npm test:e2e (api) via docker exec"
 $COMPOSE exec -T backend npm run test:e2e
 

@@ -39,7 +39,7 @@ coverage/
 # Misc
 .cache/
 tmp/
-.tmp/
+session/
 .meta/
 temp/
 
