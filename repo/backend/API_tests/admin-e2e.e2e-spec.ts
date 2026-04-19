@@ -8,12 +8,25 @@ import { RedisService } from "../src/modules/cache/redis.service";
 const hasDatabase = Boolean(process.env.DATABASE_URL);
 const describeDb = hasDatabase ? describe : describe.skip;
 
+// In-memory store for CSRF tokens for test sessions
+const csrfStore: Record<string, string> = {};
 const redisStub = {
   raw: {
     incr: jest.fn().mockResolvedValue(1),
     expire: jest.fn().mockResolvedValue(1),
-    get: jest.fn().mockResolvedValue(null),
-    set: jest.fn().mockResolvedValue("OK"),
+    get: jest.fn().mockImplementation(async (key: string) => {
+      if (key.startsWith("csrf:")) {
+        return csrfStore[key] ?? null;
+      }
+      return null;
+    }),
+    set: jest.fn().mockImplementation(async (key: string, value: string) => {
+      if (key.startsWith("csrf:")) {
+        csrfStore[key] = value;
+        return "OK";
+      }
+      return "OK";
+    }),
     rpush: jest.fn().mockResolvedValue(1),
     lpop: jest.fn().mockResolvedValue(null),
     llen: jest.fn().mockResolvedValue(0)

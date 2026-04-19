@@ -27,6 +27,8 @@ services:
     environment:
       NODE_ENV: development
       ENABLE_SEEDING: "true"
+      ALLOW_DETERMINISTIC_SEED_CREDENTIALS: "true"
+      ALLOW_DEFAULT_SEED_PASSWORD_LOGIN: "true"
       CHANNEL_SECRET_PREPAID_BALANCE: dev-prepaid-channel-secret
       CHANNEL_SECRET_INVOICE_CREDIT: dev-invoice-channel-secret
       CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT: dev-po-channel-secret

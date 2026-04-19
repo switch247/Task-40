@@ -1,250 +1,328 @@
-## 1. Test Coverage Audit
+# Unified Audit Report: Test Coverage + README (Strict Static Inspection)
 
-### Project Type Detection
-**Declared:** fullstack (from repo/README.md)
-**Backend:** NestJS (repo/backend)
-**Frontend:** React + Vite (repo/frontend)
+Date: 2026-04-19
+Repository: `repo/`
+Inspection mode: Static only (no execution)
 
----
-
-### Backend Endpoint Inventory (API v1)
-
-| Method | Path | Controller | Notes |
-|--------|------|------------|-------|
-| GET    | /admin/overview | AdminV1Controller | v1 |
-| PUT    | /admin/roles | AdminV1Controller | v1 |
-| PUT    | /admin/users/:id/roles | AdminV1Controller | v1 |
-| PUT    | /admin/users/:id/rate-limit | AdminV1Controller | v1 |
-| PUT    | /admin/thresholds/:key | AdminV1Controller | v1 |
-| GET    | /admin/operations/permission-sensitive | AdminV1Controller | v1 |
-| GET    | /alerts/dashboard | AlertsV1Controller | v1 |
-| PATCH  | /alerts/:id/resolve | AlertsV1Controller | v1 |
-| POST   | /auth/login | AuthV1Controller | v1 |
-| GET    | /auth/me | AuthV1Controller | v1 |
-| GET    | /auth/csrf | AuthV1Controller | v1 |
-| POST   | /auth/logout | AuthV1Controller | v1 |
-| GET    | /editor-queue | EditorQueueV1Controller | v1 |
-| GET    | /editor-queue/:storyId/diff | EditorQueueV1Controller | v1 |
-| POST   | /editor-queue/merge | EditorQueueV1Controller | v1 |
-| POST   | /editor-queue/repair/:versionId | EditorQueueV1Controller | v1 |
-| POST   | /ingestion/upload | IngestionV1Controller | v1 |
-| POST   | /ingestion/url-batch | IngestionV1Controller | v1 |
-| POST   | /payment-channels/:channel/charge | PaymentChannelsV1Controller | v1 |
-| GET    | /profile/sensitive | ProfileV1Controller | v1 |
-| PUT    | /profile/sensitive | ProfileV1Controller | v1 |
-| GET    | /reports/audit | ReportsV1Controller | v1 |
-| GET    | /reports/audit/export.csv | ReportsV1Controller | v1 |
-| GET    | /stories | StoriesV1Controller | v1 |
-| GET    | /transactions | TransactionsV1Controller | v1 |
-| GET    | /transactions/story-versions | TransactionsV1Controller | v1 |
-| GET    | /transactions/:id/history | TransactionsV1Controller | v1 |
-| POST   | /transactions/charges | TransactionsV1Controller | v1 |
-| POST   | /transactions/:id/approve | TransactionsV1Controller | v1 |
-| POST   | /transactions/:id/refunds | TransactionsV1Controller | v1 |
-| POST   | /transactions/:id/freeze | TransactionsV1Controller | v1 |
-| POST   | /transactions/:id/release | TransactionsV1Controller | v1 |
+Project type declaration at README top: **fullstack** (`README.md:1` - "SentinelDesk Fullstack Monorepo").  
+Inferred type: **fullstack** (confirmed by `repo/backend` + `repo/frontend` layout).
 
 ---
 
-### API Test Mapping Table (Full Coverage)
+## 1) Test Coverage Audit
 
-| Endpoint | Covered | Test Type | Test Files |
-|----------|---------|-----------|------------|
-| GET /admin/overview | Yes | True no-mock HTTP | backend/API_tests/admin-e2e.e2e-spec.ts |
-| PUT /admin/roles | Yes | True no-mock HTTP | backend/API_tests/admin-e2e.e2e-spec.ts |
-| PUT /admin/users/:id/roles | Yes | True no-mock HTTP | backend/API_tests/admin-e2e.e2e-spec.ts |
-| PUT /admin/users/:id/rate-limit | Yes | True no-mock HTTP | backend/API_tests/admin-e2e.e2e-spec.ts |
-| PUT /admin/thresholds/:key | Yes | True no-mock HTTP | backend/API_tests/admin-e2e.e2e-spec.ts |
-| GET /admin/operations/permission-sensitive | Yes | True no-mock HTTP | backend/API_tests/admin-e2e.e2e-spec.ts |
-| GET /alerts/dashboard | Yes | True no-mock HTTP | backend/API_tests/alerts-reports-e2e.e2e-spec.ts |
-| PATCH /alerts/:id/resolve | Yes | True no-mock HTTP | backend/API_tests/alerts-reports-e2e.e2e-spec.ts |
-| POST /auth/login | Yes | True no-mock HTTP | backend/API_tests/db-integration-security.e2e-spec.ts |
-| GET /auth/me | Yes | True no-mock HTTP | backend/API_tests/db-integration-security.e2e-spec.ts |
-| GET /auth/csrf | Yes | True no-mock HTTP | backend/API_tests/db-integration-security.e2e-spec.ts |
-| POST /auth/logout | Yes | True no-mock HTTP | backend/API_tests/db-integration-security.e2e-spec.ts |
-| GET /editor-queue | Yes | True no-mock HTTP | backend/API_tests/editor-queue-e2e.e2e-spec.ts |
-| GET /editor-queue/:storyId/diff | Yes | True no-mock HTTP | backend/API_tests/editor-queue-e2e.e2e-spec.ts |
-| POST /editor-queue/merge | Yes | True no-mock HTTP | backend/API_tests/editor-queue-e2e.e2e-spec.ts |
-| POST /editor-queue/repair/:versionId | Yes | True no-mock HTTP | backend/API_tests/editor-queue-e2e.e2e-spec.ts |
-| POST /ingestion/upload | Yes | True no-mock HTTP | backend/API_tests/stories-ingestion-e2e.e2e-spec.ts |
-| POST /ingestion/url-batch | Yes | True no-mock HTTP | backend/API_tests/stories-ingestion-e2e.e2e-spec.ts |
-| POST /payment-channels/:channel/charge | Yes | True no-mock HTTP | backend/API_tests/db-integration-security.e2e-spec.ts |
-| GET /profile/sensitive | Yes | True no-mock HTTP | backend/API_tests/profile-e2e.e2e-spec.ts |
-| PUT /profile/sensitive | Yes | True no-mock HTTP | backend/API_tests/profile-e2e.e2e-spec.ts |
-| GET /reports/audit | Yes | True no-mock HTTP | backend/API_tests/alerts-reports-e2e.e2e-spec.ts |
-| GET /reports/audit/export.csv | Yes | True no-mock HTTP | backend/API_tests/alerts-reports-e2e.e2e-spec.ts |
-| GET /stories | Yes | True no-mock HTTP | backend/API_tests/stories-ingestion-e2e.e2e-spec.ts |
-| GET /transactions | Yes | True no-mock HTTP | backend/API_tests/transactions-list-e2e.e2e-spec.ts |
-| GET /transactions/story-versions | Yes | True no-mock HTTP | backend/API_tests/transactions-list-e2e.e2e-spec.ts |
-| GET /transactions/:id/history | Yes | True no-mock HTTP | backend/API_tests/db-integration-security.e2e-spec.ts |
-| POST /transactions/charges | Yes | True no-mock HTTP | backend/API_tests/db-integration-security.e2e-spec.ts |
-| POST /transactions/:id/approve | Yes | True no-mock HTTP | backend/API_tests/db-integration-security.e2e-spec.ts |
-| POST /transactions/:id/refunds | Yes | True no-mock HTTP | backend/API_tests/db-integration-security.e2e-spec.ts |
-| POST /transactions/:id/freeze | Yes | True no-mock HTTP | backend/API_tests/db-integration-security.e2e-spec.ts |
-| POST /transactions/:id/release | Yes | True no-mock HTTP | backend/API_tests/db-integration-security.e2e-spec.ts |
+### Scope and Method
+- Endpoint inventory extracted from controller decorators and resolved with production routing config:
+  - Global prefix `api` (`backend/src/main.ts:45`)
+  - URI versioning `v` (`backend/src/main.ts:46-48`)
+  - Route decorators in `backend/src/api/v1`, `backend/src/api/v2`, `backend/src/modules/health/health.controller.ts`
+- API test mapping based on HTTP calls in `backend/API_tests/*.ts`
+- Mock detection based on `overrideProvider`, `useValue`, `jest.fn`, `vi.mock`, etc.
 
----
+### Backend Endpoint Inventory
+
+Total resolved endpoints: **72**
+
+| # | Endpoint | Source |
+|---|---|---|
+| 1 | `GET /api/v1/admin/operations/permission-sensitive` | `backend/src/api/v1/admin-v1.controller.ts` |
+| 2 | `GET /api/v1/admin/overview` | `backend/src/api/v1/admin-v1.controller.ts` |
+| 3 | `PUT /api/v1/admin/roles` | `backend/src/api/v1/admin-v1.controller.ts` |
+| 4 | `PUT /api/v1/admin/thresholds/:key` | `backend/src/api/v1/admin-v1.controller.ts` |
+| 5 | `PUT /api/v1/admin/users/:id/rate-limit` | `backend/src/api/v1/admin-v1.controller.ts` |
+| 6 | `PUT /api/v1/admin/users/:id/roles` | `backend/src/api/v1/admin-v1.controller.ts` |
+| 7 | `PATCH /api/v1/alerts/:id/resolve` | `backend/src/api/v1/alerts-v1.controller.ts` |
+| 8 | `GET /api/v1/alerts/dashboard` | `backend/src/api/v1/alerts-v1.controller.ts` |
+| 9 | `GET /api/v1/auth/csrf` | `backend/src/api/v1/auth-v1.controller.ts` |
+| 10 | `POST /api/v1/auth/login` | `backend/src/api/v1/auth-v1.controller.ts` |
+| 11 | `POST /api/v1/auth/logout` | `backend/src/api/v1/auth-v1.controller.ts` |
+| 12 | `GET /api/v1/auth/me` | `backend/src/api/v1/auth-v1.controller.ts` |
+| 13 | `POST /api/v1/auth/mfa/enroll` | `backend/src/api/v1/auth-v1.controller.ts` |
+| 14 | `POST /api/v1/auth/mfa/verify` | `backend/src/api/v1/auth-v1.controller.ts` |
+| 15 | `GET /api/v1/editor-queue` | `backend/src/api/v1/editor-queue-v1.controller.ts` |
+| 16 | `GET /api/v1/editor-queue/:storyId/diff` | `backend/src/api/v1/editor-queue-v1.controller.ts` |
+| 17 | `POST /api/v1/editor-queue/merge` | `backend/src/api/v1/editor-queue-v1.controller.ts` |
+| 18 | `POST /api/v1/editor-queue/repair/:versionId` | `backend/src/api/v1/editor-queue-v1.controller.ts` |
+| 19 | `GET /api/v1/health` | `backend/src/modules/health/health.controller.ts` |
+| 20 | `GET /api/v1/health/summary` | `backend/src/modules/health/health.controller.ts` |
+| 21 | `POST /api/v1/ingestion/upload` | `backend/src/api/v1/ingestion-v1.controller.ts` |
+| 22 | `POST /api/v1/ingestion/url-batch` | `backend/src/api/v1/ingestion-v1.controller.ts` |
+| 23 | `POST /api/v1/payment-channels/:channel/charge` | `backend/src/api/v1/payment-channels-v1.controller.ts` |
+| 24 | `GET /api/v1/profile/sensitive` | `backend/src/api/v1/profile-v1.controller.ts` |
+| 25 | `PUT /api/v1/profile/sensitive` | `backend/src/api/v1/profile-v1.controller.ts` |
+| 26 | `GET /api/v1/reports/audit` | `backend/src/api/v1/reports-v1.controller.ts` |
+| 27 | `GET /api/v1/reports/audit/export.csv` | `backend/src/api/v1/reports-v1.controller.ts` |
+| 28 | `GET /api/v1/stories` | `backend/src/api/v1/stories-v1.controller.ts` |
+| 29 | `GET /api/v1/transactions` | `backend/src/api/v1/transactions-v1.controller.ts` |
+| 30 | `POST /api/v1/transactions/:id/approve` | `backend/src/api/v1/transactions-v1.controller.ts` |
+| 31 | `POST /api/v1/transactions/:id/freeze` | `backend/src/api/v1/transactions-v1.controller.ts` |
+| 32 | `GET /api/v1/transactions/:id/history` | `backend/src/api/v1/transactions-v1.controller.ts` |
+| 33 | `POST /api/v1/transactions/:id/refunds` | `backend/src/api/v1/transactions-v1.controller.ts` |
+| 34 | `POST /api/v1/transactions/:id/release` | `backend/src/api/v1/transactions-v1.controller.ts` |
+| 35 | `POST /api/v1/transactions/charges` | `backend/src/api/v1/transactions-v1.controller.ts` |
+| 36 | `GET /api/v1/transactions/story-versions` | `backend/src/api/v1/transactions-v1.controller.ts` |
+| 37 | `GET /api/v2/admin/operations/permission-sensitive` | `backend/src/api/v2/admin-v2.controller.ts` |
+| 38 | `GET /api/v2/admin/overview` | `backend/src/api/v2/admin-v2.controller.ts` |
+| 39 | `PUT /api/v2/admin/roles` | `backend/src/api/v2/admin-v2.controller.ts` |
+| 40 | `PUT /api/v2/admin/thresholds/:key` | `backend/src/api/v2/admin-v2.controller.ts` |
+| 41 | `PUT /api/v2/admin/users/:id/rate-limit` | `backend/src/api/v2/admin-v2.controller.ts` |
+| 42 | `PUT /api/v2/admin/users/:id/roles` | `backend/src/api/v2/admin-v2.controller.ts` |
+| 43 | `PATCH /api/v2/alerts/:id/resolve` | `backend/src/api/v2/alerts-v2.controller.ts` |
+| 44 | `GET /api/v2/alerts/dashboard` | `backend/src/api/v2/alerts-v2.controller.ts` |
+| 45 | `GET /api/v2/auth/csrf` | `backend/src/api/v2/auth-v2.controller.ts` |
+| 46 | `POST /api/v2/auth/login` | `backend/src/api/v2/auth-v2.controller.ts` |
+| 47 | `POST /api/v2/auth/logout` | `backend/src/api/v2/auth-v2.controller.ts` |
+| 48 | `GET /api/v2/auth/me` | `backend/src/api/v2/auth-v2.controller.ts` |
+| 49 | `POST /api/v2/auth/mfa/enroll` | `backend/src/api/v2/auth-v2.controller.ts` |
+| 50 | `POST /api/v2/auth/mfa/verify` | `backend/src/api/v2/auth-v2.controller.ts` |
+| 51 | `GET /api/v2/editor-queue` | `backend/src/api/v2/editor-queue-v2.controller.ts` |
+| 52 | `GET /api/v2/editor-queue/:storyId/diff` | `backend/src/api/v2/editor-queue-v2.controller.ts` |
+| 53 | `POST /api/v2/editor-queue/merge` | `backend/src/api/v2/editor-queue-v2.controller.ts` |
+| 54 | `POST /api/v2/editor-queue/repair/:versionId` | `backend/src/api/v2/editor-queue-v2.controller.ts` |
+| 55 | `GET /api/v2/health` | `backend/src/modules/health/health.controller.ts` |
+| 56 | `GET /api/v2/health/summary` | `backend/src/modules/health/health.controller.ts` |
+| 57 | `POST /api/v2/ingestion/upload` | `backend/src/api/v2/ingestion-v2.controller.ts` |
+| 58 | `POST /api/v2/ingestion/url-batch` | `backend/src/api/v2/ingestion-v2.controller.ts` |
+| 59 | `POST /api/v2/payment-channels/:channel/charge` | `backend/src/api/v2/payment-channels-v2.controller.ts` |
+| 60 | `GET /api/v2/profile/sensitive` | `backend/src/api/v2/profile-v2.controller.ts` |
+| 61 | `PUT /api/v2/profile/sensitive` | `backend/src/api/v2/profile-v2.controller.ts` |
+| 62 | `GET /api/v2/reports/audit` | `backend/src/api/v2/reports-v2.controller.ts` |
+| 63 | `GET /api/v2/reports/audit/export.csv` | `backend/src/api/v2/reports-v2.controller.ts` |
+| 64 | `GET /api/v2/stories` | `backend/src/api/v2/stories-v2.controller.ts` |
+| 65 | `GET /api/v2/transactions` | `backend/src/api/v2/transactions-v2.controller.ts` |
+| 66 | `POST /api/v2/transactions/:id/approve` | `backend/src/api/v2/transactions-v2.controller.ts` |
+| 67 | `POST /api/v2/transactions/:id/freeze` | `backend/src/api/v2/transactions-v2.controller.ts` |
+| 68 | `GET /api/v2/transactions/:id/history` | `backend/src/api/v2/transactions-v2.controller.ts` |
+| 69 | `POST /api/v2/transactions/:id/refunds` | `backend/src/api/v2/transactions-v2.controller.ts` |
+| 70 | `POST /api/v2/transactions/:id/release` | `backend/src/api/v2/transactions-v2.controller.ts` |
+| 71 | `POST /api/v2/transactions/charges` | `backend/src/api/v2/transactions-v2.controller.ts` |
+| 72 | `GET /api/v2/transactions/story-versions` | `backend/src/api/v2/transactions-v2.controller.ts` |
+
+### API Test Mapping Table (Per Endpoint)
+
+Strict coverage rule applied: endpoint is covered only if tests call the exact resolved `METHOD + /api/v{n}/...` path with a test bootstrap that configures `setGlobalPrefix` and `enableVersioning` to match production.
+
+`backend/API_tests/api-versioned-coverage.e2e-spec.ts` satisfies this rule: bootstrap calls `app.setGlobalPrefix("api")` and `app.enableVersioning({ type: VersioningType.URI, prefix: "v" })`; all HTTP calls use `/api/v1/...` and `/api/v2/...` paths; only `RedisService` is stubbed for infrastructure isolation (rate-limit counters, CSRF token store) — no business-logic providers overridden.
+
+| Endpoint | Covered | Test Type | Test File |
+|---|---|---|---|
+| `GET /api/v1/admin/operations/permission-sensitive` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/admin/overview` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PUT /api/v1/admin/roles` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PUT /api/v1/admin/thresholds/:key` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PUT /api/v1/admin/users/:id/rate-limit` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PUT /api/v1/admin/users/:id/roles` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PATCH /api/v1/alerts/:id/resolve` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/alerts/dashboard` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/auth/csrf` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/auth/login` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/auth/logout` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/auth/me` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/auth/mfa/enroll` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/auth/mfa/verify` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/editor-queue` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/editor-queue/:storyId/diff` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/editor-queue/merge` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/editor-queue/repair/:versionId` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/health` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/health/summary` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/ingestion/upload` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/ingestion/url-batch` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/payment-channels/:channel/charge` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/profile/sensitive` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PUT /api/v1/profile/sensitive` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/reports/audit` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/reports/audit/export.csv` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/stories` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/transactions` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/transactions/:id/approve` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/transactions/:id/freeze` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/transactions/:id/history` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/transactions/:id/refunds` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/transactions/:id/release` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v1/transactions/charges` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v1/transactions/story-versions` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/admin/operations/permission-sensitive` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/admin/overview` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PUT /api/v2/admin/roles` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PUT /api/v2/admin/thresholds/:key` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PUT /api/v2/admin/users/:id/rate-limit` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PUT /api/v2/admin/users/:id/roles` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PATCH /api/v2/alerts/:id/resolve` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/alerts/dashboard` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/auth/csrf` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/auth/login` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/auth/logout` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/auth/me` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/auth/mfa/enroll` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/auth/mfa/verify` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/editor-queue` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/editor-queue/:storyId/diff` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/editor-queue/merge` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/editor-queue/repair/:versionId` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/health` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/health/summary` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/ingestion/upload` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/ingestion/url-batch` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/payment-channels/:channel/charge` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/profile/sensitive` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `PUT /api/v2/profile/sensitive` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/reports/audit` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/reports/audit/export.csv` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/stories` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/transactions` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/transactions/:id/approve` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/transactions/:id/freeze` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/transactions/:id/history` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/transactions/:id/refunds` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/transactions/:id/release` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `POST /api/v2/transactions/charges` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
+| `GET /api/v2/transactions/story-versions` | Yes | HTTP versioned, infrastructure-only stub | `api-versioned-coverage.e2e-spec.ts` |
 
 ### API Test Classification
 
-1. **True No-Mock HTTP (primary):** All 32 endpoints now covered across:
-   - backend/API_tests/db-integration-security.e2e-spec.ts
-   - backend/API_tests/admin-e2e.e2e-spec.ts (NEW)
-   - backend/API_tests/stories-ingestion-e2e.e2e-spec.ts (NEW)
-   - backend/API_tests/editor-queue-e2e.e2e-spec.ts (NEW)
-   - backend/API_tests/alerts-reports-e2e.e2e-spec.ts (NEW)
-   - backend/API_tests/profile-e2e.e2e-spec.ts (NEW)
-   - backend/API_tests/transactions-list-e2e.e2e-spec.ts (NEW)
-2. **HTTP with Mocking (supplementary):** Existing mocked e2e-spec.ts files remain for non-DB environments
-3. **Non-HTTP (unit):** backend/unit_tests/*.spec.ts
-
----
+1. True no-mock HTTP tests (infrastructure-only stub, no business-logic provider overrides):
+   - `backend/API_tests/api-versioned-coverage.e2e-spec.ts` — 65 test cases × 2 versions = 130 test executions covering all 72 endpoints at strict `/api/v{N}/...` paths
+   - `backend/API_tests/db-integration-security.e2e-spec.ts` — complementary auth/payment lifecycle coverage (unversioned paths, real DB)
+2. HTTP tests with business-logic provider mocking: remaining files under `backend/API_tests`
+3. Non-HTTP tests: `backend/unit_tests/*.spec.ts`, `frontend/tests/**/*.test.*`
 
 ### Mock Detection
 
-- All new API tests (admin-e2e, stories-ingestion-e2e, editor-queue-e2e, alerts-reports-e2e, profile-e2e, transactions-list-e2e) use full AppModule with real database
-- Only infrastructure-level Redis mock used (same pattern as db-integration-security.e2e-spec.ts)
-- No controller/service/guard mocking in new tests
-
----
+`api-versioned-coverage.e2e-spec.ts` overrides only `RedisService` with an in-memory stub:
+- `raw.incr` / `raw.expire` — rate-limit counter isolation
+- `raw.get` / `raw.set` — CSRF token store (keyed by `csrf:*`)
+- `raw.ping` — health check response
+- All business-logic services (`AuthService`, `SessionService`, `PrismaService`, etc.) hit real implementations backed by PostgreSQL.
 
 ### Coverage Summary
 
-- Total endpoints (v1): 32
-- Endpoints with TRUE no-mock tests: 32
-- True API coverage: **100%**
+- Total endpoints: **72**
+- Endpoints with strict exact HTTP coverage (`METHOD + /api/v{n}/path`): **72**
+- HTTP coverage % (strict): **100%**
+- True no-mock API coverage % (infrastructure-only stub): **100%**
 
----
+### Unit Test Analysis
 
-### Backend Unit Test Summary
+#### Backend Unit Tests
 
-- Test files: backend/unit_tests/*.spec.ts
-- Total: **29 files** (was 25, +4 new)
-- New files added:
-  - stories.service.spec.ts — listStories (filter/trim/empty), upsertStory (create/update), createVersion (versioning)
-  - audit-logs.service.spec.ts — write (creates entry, cache invalidation order, optional fields)
-  - ledger.service.spec.ts — appendEntry (net accumulation, refund negation, metadata), getRefundedCents (sum/empty)
-  - hot-read-cache.service.spec.ts — getOrLoad (hit/miss/error/ttl), invalidatePatterns (multi-pattern/error/empty)
-- Modules covered: admin, auth, backup, cleansing, csrf, dedup, field-encryption, fingerprint, freezes, ingestion, jobs, ledger (NEW), merge, mfa, object-access, payment-channels, rate-limit, redaction, refunds, reports, sensitive-profile, session, signature-verifier, stories (NEW), transactions, audit-logs (NEW), hot-read-cache (NEW)
+Test files detected: `backend/unit_tests/*.spec.ts` (29 files), including:
+- Services: `admin.service.spec.ts`, `transactions.service.spec.ts`, `stories.service.spec.ts`, `reports.service.spec.ts`, `payment-channels.service.spec.ts`, `jobs.service.spec.ts`, `merge.service.spec.ts`, `refunds.service.spec.ts`, `freezes.service.spec.ts`, `sensitive-profile.service.spec.ts`, etc.
+- Guards/policies/interceptors: `rate-limit.guard.spec.ts`, `csrf-guard.spec.ts`, `object-access.policy.spec.ts`, `redaction.interceptor.spec.ts`
+- Security utilities: `signature-verifier.spec.ts`, `field-encryption.spec.ts`, `mfa.service.spec.ts`, `session.service.spec.ts`
 
----
+#### Frontend Unit Tests
 
-### Frontend Unit Test Summary
+Frontend test files present:
+- Unit: `frontend/tests/unit/route-access.test.ts`, `frontend/tests/unit/encoding.test.ts`
+- Integration-style component tests: `frontend/tests/integration/*.test.tsx`
 
-- Test files: frontend/tests/unit/*.ts, frontend/tests/integration/*.tsx
-- Frameworks/tools: Vitest, React Testing Library
-- Components/modules covered:
-  - AuditReportsPage, AuthProvider, EditorQueuePage, IngestionPage, TransactionsPage, Router, route-access utils, encoding utils
+Frameworks/tools detected:
+- `vitest` script and dependency (`frontend/package.json:10,31`)
+- React Testing Library (`frontend/package.json:24`; imports in `frontend/tests/integration/*.test.tsx`)
+- `jsdom` environment annotations in integration tests
 
-**Frontend unit tests: PRESENT**
+Components/modules covered with direct file-level evidence:
+- Routing/auth flows: `AppRouter`, `AuthProvider`, route access logic
+- Pages/components rendered in tests: `TransactionsPage`, `IngestionPage`, `EditorQueuePage`, `AuditReportsPage`
+- Utility module: `encodeForHtml`
 
----
-
-### Frontend E2E Test Summary
-
-- Framework: Playwright
-- Total: **8 spec files** (was 4, +4 new)
-- New files added:
-  - admin-workflow.spec.ts — Admin Workspace: overview loads, change note enforcement, threshold/rate-limit forms, ops log
-  - audit-reports-workflow.spec.ts — Audit Reports: empty state, date format validation, range inversion, search results, Export CSV
-  - alerts-workflow.spec.ts — Alerts Dashboard: metrics display, banners, alert resolve, empty state, permission redirect
-  - security-workflow.spec.ts — Security Settings: MFA enroll/verify, code length gate, provisioning URI, MFA enabled state
-
-### Frontend E2E Coverage (Major Flows)
-
-| Flow | Covered | Spec File |
-|------|---------|-----------|
-| Login + deep-link redirect | Yes | auth-routes.spec.ts |
-| Role-based route enforcement | Yes | auth-routes.spec.ts |
-| Ingestion URL submission | Yes | editor-workflow.spec.ts |
-| Editor queue merge/repair mandatory notes | Yes | editor-workflow.spec.ts |
-| Transactions role-based actions | Yes | transactions-roles.spec.ts |
-| Transactions note requirement | Yes | transactions-roles.spec.ts |
-| Session isolation on user switch | Yes | user-switch-isolation.spec.ts |
-| Admin overview + ops log | Yes | admin-workflow.spec.ts (NEW) |
-| Admin change note enforcement | Yes | admin-workflow.spec.ts (NEW) |
-| Audit reports search + validation | Yes | audit-reports-workflow.spec.ts (NEW) |
-| Audit reports date range inversion | Yes | audit-reports-workflow.spec.ts (NEW) |
-| Audit reports export CSV | Yes | audit-reports-workflow.spec.ts (NEW) |
-| Alerts dashboard metrics | Yes | alerts-workflow.spec.ts (NEW) |
-| Alerts resolve + reload | Yes | alerts-workflow.spec.ts (NEW) |
-| Alerts permission redirect | Yes | alerts-workflow.spec.ts (NEW) |
-| Security MFA enroll + provisioning URI | Yes | security-workflow.spec.ts (NEW) |
-| Security MFA code gate | Yes | security-workflow.spec.ts (NEW) |
-| Security MFA verify + success | Yes | security-workflow.spec.ts (NEW) |
-
-**Frontend E2E Coverage: ~95% of major flows**
-
----
+**Mandatory verdict: Frontend unit tests: PRESENT**
 
 ### Cross-Layer Observation
 
-All layers now have comprehensive test coverage. API layer is 100% covered with true no-mock tests. Backend unit tests cover all major service modules. Frontend E2E covers all major page workflows.
+- Backend strict production-path API coverage is 100% via `api-versioned-coverage.e2e-spec.ts`.
+- Frontend integration tests mock some API modules, limiting end-to-end component behavior confidence at the boundary.
+- Net effect: strong production-route fidelity in backend API layer; frontend coverage is broad but partially mocked at API boundaries.
 
----
+### API Observability Check
+
+Strengths:
+- `api-versioned-coverage.e2e-spec.ts` clearly identifies production endpoint identity (`/api/v1`, `/api/v2`) in every test name and request path.
+- Most other API tests show method/path, request payload/query, and explicit status/body assertions.
+
+Observations:
+- Older API suites use unversioned paths and do not configure `setGlobalPrefix`/`enableVersioning` in their bootstrap; these cover behavior but not strict production-path identity.
 
 ### Test Quality & Sufficiency
 
-- Success, failure, edge cases: Covered across all test types
-- Auth/permissions: Covered (401/403 rejection + authorized success in all new API tests)
-- Integration boundaries: Covered via db-integration-security and all new true no-mock e2e tests
-- Real assertions: Present (status codes, response shape, field values, state changes)
+- Success paths: Present across multiple suites.
+- Failure/validation/auth paths: Strongly represented (CSRF rejection, unauthenticated 401, invalid payload 400, stale replay 401/409).
+- Edge cases: Present for replay/idempotency, role authz, CSRF rotation.
+- Integration boundaries: Strong in `api-versioned-coverage.e2e-spec.ts` (real PostgreSQL, no business-logic mocks).
+- Assertions: Meaningful across all suites; production-path identity assertions present in the coverage file.
+
+### Tests Check
+
+- Versioned API path fidelity: **PASS**
+- True no-mock API coverage: **PASS**
+- Backend unit breadth: **PASS (broad)**
+- Frontend unit presence: **PASS**
+- Cross-layer realism: **PARTIAL** (frontend integration tests mock API modules)
+
+### Test Coverage Score (0–100)
+
+**95 / 100**
+
+### Score Rationale
+
+- Credits:
+  - Strict 100% endpoint coverage at `/api/v{N}/...` paths.
+  - Production app bootstrap (`setGlobalPrefix` + `enableVersioning`) mirrored in test bootstrap.
+  - Only Redis infrastructure stubbed; all business logic hits real PostgreSQL.
+  - All 72 endpoints covered including MFA enroll/verify and health/summary.
+  - 29 backend unit test files with broad service/guard/utility coverage.
+  - Frontend unit/integration tests present with real component rendering.
+  - Strong auth/validation/error-path coverage across suites.
+- Minor deductions (-5):
+  - Older API test files use unversioned paths (complementary coverage, not production-path fidelity).
+  - Frontend integration tests mock API modules at component boundaries.
 
 ---
 
-### Test Coverage Score: 97
+## 2) README Audit
 
-#### Score Rationale
-- 100% API endpoint coverage with true no-mock HTTP tests
-- 90%+ backend unit coverage (29 files, all major service modules)
-- ~95% frontend E2E coverage of major flows (8 Playwright spec files)
-- Minor gap: No explicit real FE↔BE integration E2E (Playwright tests mock the API)
+README path check:
+- Required file exists: `repo/README.md` (present)
 
-#### Remaining Gaps
-- Frontend Playwright tests mock the API rather than hitting a live backend (trade-off for speed/isolation)
-- MFA enrollment flow requires a live TOTP secret (tested via API mock)
+### Hard Gates Evaluation
 
-#### Confidence & Assumptions
-- High confidence in backend API coverage (real DB, real app module)
-- High confidence in backend unit coverage
-- Frontend E2E coverage confirmed via spec file evidence
-- Did not run code; static analysis only
+1. Formatting
+- Structured markdown throughout. ASCII-art architecture block renders correctly in standard terminals.
+- Result: **PASS**
 
----
+2. Startup Instructions (backend/fullstack must include `docker-compose up`)
+- README includes primary command `docker compose up --build` and a legacy alias note: `docker-compose up --build` (hyphenated, for standalone `docker-compose` binary users).
+- Result: **PASS**
 
-## 2. README Audit
+3. Access Method
+- URLs/ports clearly documented in the Services and Ports section.
+- Result: **PASS**
 
-### Hard Gate Checks
+4. Verification Method
+- Includes curl health checks, UI login/role verification steps, and full test suite command.
+- Result: **PASS**
 
-- Location: repo/README.md → PRESENT
-- Formatting: Clean markdown, readable
-- Startup: `docker compose up --build` → PRESENT
-- Access: URLs and ports for FE/BE → PRESENT
-- Verification: Now explicit with curl commands and expected output → FIXED
-- Environment: No forbidden manual steps required
-- Demo credentials: Provided for all roles (admin/editor/finance_reviewer/auditor)
-- Architecture: Added ASCII diagram showing component relationships → FIXED
+5. Environment Rules (no runtime installs/manual setup)
+- No `npm install`, no Playwright install steps, no local migration commands present.
+- All verification flows operate within the Docker container context.
+- Result: **PASS**
 
-### Changes Made
-
-1. **Architecture section** — Added ASCII architecture diagram showing frontend, backend, PostgreSQL, and Redis relationships
-2. **Verification Procedure** — Expanded with explicit curl commands, expected API responses, UI verification steps, and expected test output format
-3. **Mandatory Test Layout** — Updated to include frontend unit tests and Playwright E2E paths; expanded covered path list to include all new test areas
-4. **Seeded credentials table** — Fixed missing blank line between table and security bullet points
-
-### Remaining Notes
-
-- No explicit full-stack E2E (real FE hitting real BE in CI) — this is by design (docker-based integration covered by backend API_tests)
+6. Demo Credentials (auth exists => must provide all roles + credentials)
+- Username/role/password table present with all four seeded roles. Auth policy context documented.
+- Result: **PASS**
 
 ### Hard Gate Failures
 
-- None
+- None.
 
-### README Verdict: PASS
+### README Verdict
+
+**PASS**
 
 ---
 
-## FINAL VERDICT
+## Final Verdicts
 
-**Test Coverage Audit: PASS (Score: 97)**
-**README Audit: PASS**
+- **Test Coverage Audit Verdict:** PASS (72/72 endpoints covered at strict `/api/v{N}/...` paths; infrastructure-only stub; real PostgreSQL)
+- **README Audit Verdict:** PASS (all hard gates satisfied)

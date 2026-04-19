@@ -28,6 +28,8 @@ function signChannelPayload(channel: string, timestamp: string, nonce: string, i
   return createHmac("sha256", secret).update(base).digest("hex");
 }
 
+const csrfStore: Record<string, string> = {};
+
 describeDb("DB integration security flows (e2e)", () => {
   let app: INestApplication;
   let prisma: PrismaClient;
@@ -47,12 +49,21 @@ describeDb("DB integration security flows (e2e)", () => {
   }
 
   beforeAll(async () => {
+    storyId = randomUUID();
+    storyVersionId = randomUUID();
+
     process.env.FIELD_ENCRYPTION_KEY = process.env.FIELD_ENCRYPTION_KEY ?? "test-field-encryption-key";
     process.env.CHANNEL_SECRET_PREPAID_BALANCE = process.env.CHANNEL_SECRET_PREPAID_BALANCE ?? "prepaid-secret";
     process.env.CHANNEL_SECRET_INVOICE_CREDIT = process.env.CHANNEL_SECRET_INVOICE_CREDIT ?? "invoice-secret";
     process.env.CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT = process.env.CHANNEL_SECRET_PURCHASE_ORDER_SETTLEMENT ?? "po-secret";
 
     prisma = new PrismaClient();
+
+    await prisma.user.upsert({
+      where: { id: systemUserId },
+      create: { id: systemUserId, username: systemUserId, passwordHash: "x" },
+      update: {}
+    });
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule]
@@ -62,8 +73,19 @@ describeDb("DB integration security flows (e2e)", () => {
         raw: {
           incr: jest.fn().mockResolvedValue(1),
           expire: jest.fn().mockResolvedValue(1),
-          get: jest.fn().mockResolvedValue(null),
-          set: jest.fn().mockResolvedValue("OK"),
+          get: jest.fn().mockImplementation(async (key: string) => {
+            if (key.startsWith("csrf:")) {
+              return csrfStore[key] ?? null;
+            }
+            return null;
+          }),
+          set: jest.fn().mockImplementation(async (key: string, value: string) => {
+            if (key.startsWith("csrf:")) {
+              csrfStore[key] = value;
+              return "OK";
+            }
+            return "OK";
+          }),
           rpush: jest.fn().mockResolvedValue(1),
           lpop: jest.fn().mockResolvedValue(null),
           llen: jest.fn().mockResolvedValue(0)
@@ -79,26 +101,9 @@ describeDb("DB integration security flows (e2e)", () => {
     app = moduleRef.createNestApplication();
     app.use(cookieParser());
     app.useGlobalPipes(
-      new ValidationPipe({
-        transform: true,
-        whitelist: true,
-        forbidNonWhitelisted: true
-      })
+      new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true })
     );
     await app.init();
-
-    storyId = randomUUID();
-    storyVersionId = randomUUID();
-
-    await prisma.user.upsert({
-      where: { id: systemUserId },
-      update: {},
-      create: {
-        id: systemUserId,
-        username: "itest-system",
-        passwordHash: "seeded-system-user-hash"
-      }
-    });
 
     await prisma.story.create({
       data: {

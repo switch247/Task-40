@@ -69,8 +69,8 @@ test("admin workspace loads overview and enforces change note requirement", asyn
   await page.goto("/admin");
   await expect(page.getByRole("heading", { name: "Admin Workspace" })).toBeVisible();
 
-  await expect(page.getByText("SIMHASH_MAX_HAMMING")).toBeVisible();
-  await expect(page.getByText("editor")).toBeVisible();
+  await expect(page.getByText("Threshold Configuration")).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "editor" })).toBeVisible();
   await expect(page.getByText("PERMISSION_CHANGE")).toBeVisible();
 
   const saveThresholdBtn = page.getByRole("button", { name: "Save Threshold" });
@@ -80,7 +80,7 @@ test("admin workspace loads overview and enforces change note requirement", asyn
   await expect(saveThresholdBtn).toBeEnabled();
 
   await saveThresholdBtn.click();
-  await expect(page.getByText("SIMHASH_MAX_HAMMING")).toBeVisible();
+  await expect(page.getByText("Threshold Configuration")).toBeVisible();
 });
 
 test("admin workspace set user rate limit requires change note", async ({ page }) => {

@@ -43,16 +43,16 @@ test("alerts dashboard shows queue metrics, banners, and open alerts", async ({ 
   await page.goto("/alerts");
   await expect(page.getByRole("heading", { name: "Alerts Dashboard" })).toBeVisible();
 
-  await expect(page.getByText("12")).toBeVisible();
-  await expect(page.getByText("Queue Depth")).toBeVisible();
-  await expect(page.getByText("Open Alerts")).toBeVisible();
-  await expect(page.getByText("Active Banners")).toBeVisible();
-  await expect(page.getByText("Backup Window")).toBeVisible();
+  await expect(page.getByText("12", { exact: true })).toBeVisible();
+  await expect(page.getByText("Queue Depth").first()).toBeVisible();
+  await expect(page.getByText("Open Alerts").first()).toBeVisible();
+  await expect(page.getByText("Active Banners").first()).toBeVisible();
+  await expect(page.getByText("Backup Window").first()).toBeVisible();
 
-  await expect(page.getByText("Scheduled maintenance tonight at 02:00")).toBeVisible();
+  await expect(page.getByText("Scheduled maintenance tonight at 02:00").first()).toBeVisible();
 
-  await expect(page.getByText("Backup Failure: Backup job failed")).toBeVisible();
-  await expect(page.getByText("Queue Overflow: Queue depth exceeded threshold")).toBeVisible();
+  await expect(page.getByText("Backup Failure: Backup job failed").first()).toBeVisible();
+  await expect(page.getByText("Queue Overflow: Queue depth exceeded threshold").first()).toBeVisible();
 });
 
 test("alerts dashboard shows empty states when no alerts or banners present", async ({ page }) => {
@@ -82,7 +82,6 @@ test("alerts dashboard shows empty states when no alerts or banners present", as
 
 test("alerts dashboard resolve button calls resolve endpoint and reloads", async ({ page }) => {
   let resolveCallCount = 0;
-  let dashboardCallCount = 0;
 
   await page.route("**/api/v*/**", async (route) => {
     const req = route.request();
@@ -98,11 +97,9 @@ test("alerts dashboard resolve button calls resolve endpoint and reloads", async
       return;
     }
     if (path.endsWith("/alerts/dashboard") && req.method() === "GET") {
-      dashboardCallCount++;
-      const alerts =
-        dashboardCallCount === 1
-          ? [{ id: "alert-3", category: "TEST", severity: "LOW", title: "Test Alert", status: "OPEN", message: "Test alert for resolve", createdAt: new Date().toISOString() }]
-          : [];
+      const alerts = resolveCallCount === 0
+        ? [{ id: "alert-3", category: "TEST", severity: "LOW", title: "Test Alert", status: "OPEN", message: "Test alert for resolve", createdAt: new Date().toISOString() }]
+        : [];
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ alerts, banners: [], status: { queueDepth: 0, alertsOpen: alerts.length, activeBanners: 0 } }) });
       return;
     }
@@ -115,7 +112,7 @@ test("alerts dashboard resolve button calls resolve endpoint and reloads", async
   });
 
   await page.goto("/alerts");
-  await expect(page.getByText("Test Alert: Test alert for resolve")).toBeVisible();
+  await expect(page.getByText("Test Alert: Test alert for resolve").first()).toBeVisible();
 
   const resolveButton = page.getByRole("button", { name: "Resolve" }).first();
   await expect(resolveButton).toBeVisible();

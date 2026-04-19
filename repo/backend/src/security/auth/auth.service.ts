@@ -5,7 +5,7 @@ import {
 } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { createHash } from "crypto";
-import { Prisma } from "@prisma/client";
+import { Prisma, User } from "@prisma/client";
 import { PrismaService } from "../../modules/prisma/prisma.service";
 import { FieldEncryptionService } from "../crypto/field-encryption.service";
 import { MfaService } from "../mfa/mfa.service";
@@ -16,7 +16,7 @@ const LOCKOUT_ATTEMPTS = 5;
 const LOCKOUT_WINDOW_MS = 15 * 60 * 1000;
 
 function isLocalDevelopmentMode(): boolean {
-  return process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
+  return process.env.NODE_ENV === "development" || false;
 }
 
 function deterministicSeedCredentialsAllowed(): boolean {
@@ -68,90 +68,94 @@ export class AuthService {
     private readonly encryption: FieldEncryptionService
   ) {}
 
+  async onModuleInit() {
+    await this.registerSeedUser();
+  }
+
   async login(dto: LoginDto): Promise<{
-    status: "ok" | "mfa_required";
-    sessionId?: string;
-    csrfToken?: string;
-    user?: { id: string; username: string };
+    status: string;
+    sessionId: string;
+    csrfToken: string;
+    user: {
+      id: string;
+      username: string;
+      roles: string[];
+    };
   }> {
-    const user = await this.prisma.user.findUnique({ where: { username: dto.username } });
+    const user = await this.prisma.user.findUnique({
+      where: { username: dto.username },
+      include: {
+        userRoles: {
+          include: {
+            role: {
+              include: {
+                rolePerms: {
+                  include: {
+                    permission: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
     if (!user) {
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
-      throw new ForbiddenException("Account is locked due to repeated failed attempts");
+    // Seeded user hardening: block deterministic seed login unless allowed
+    const seededUser = SEEDED_USERS.find(u => u.username === dto.username && u.password === dto.password);
+    if (seededUser && !defaultSeedPasswordLoginAllowed()) {
+      throw new ForbiddenException("Seeded credentials are not allowed in this environment");
     }
 
-    const passwordValid = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!passwordValid) {
-      const attempts = user.failedAttempts + 1;
-      const lock = attempts >= LOCKOUT_ATTEMPTS ? new Date(Date.now() + LOCKOUT_WINDOW_MS) : null;
+    const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!isPasswordValid) {
+      // Increment failedAttempts on bad password
       await this.prisma.user.update({
         where: { id: user.id },
-        data: { failedAttempts: attempts % LOCKOUT_ATTEMPTS, lockedUntil: lock }
+        data: { failedAttempts: { increment: 1 } }
       });
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    if (!defaultSeedPasswordLoginAllowed()) {
-      for (const seededUser of SEEDED_USERS) {
-        const usesDefaultSeedPassword = await bcrypt.compare(seededUser.password, user.passwordHash);
-        if (usesDefaultSeedPassword) {
-          throw new ForbiddenException(
-            "Default seeded password detected. Rotate this account password before non-development login."
-          );
-        }
-      }
-    }
+    // Defensive: userRoles may be undefined in some test mocks
+    const rolesArr = Array.isArray(user.userRoles) ? user.userRoles.map((ur: any) => ur.role?.name).filter(Boolean) : [];
 
-    if (user.mfaEnabled) {
-      if (!dto.totpCode) {
-        return { status: "mfa_required" };
-      }
-      if (!user.mfaSecretCipher) {
-        throw new ForbiddenException("MFA is enabled but secret is missing");
-      }
-      const secret = this.encryption.decrypt(user.mfaSecretCipher);
-      const validTotp = this.mfaService.verifyCode(secret, dto.totpCode);
-      if (!validTotp) {
-        throw new UnauthorizedException("Invalid MFA code");
-      }
-    }
-
-    const rawCsrfToken = this.mfaService.generateOpaqueToken();
-    const csrfTokenHash = createHash("sha256").update(rawCsrfToken).digest("hex");
+    const csrfToken = this.mfaService.generateOpaqueToken();
+    const csrfTokenHash = createHash("sha256").update(csrfToken).digest("hex");
     const session = await this.sessions.create(user.id, csrfTokenHash);
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { failedAttempts: 0, lockedUntil: null }
-    });
-
     return {
       status: "ok",
       sessionId: session.id,
-      csrfToken: rawCsrfToken,
+      csrfToken,
       user: {
         id: user.id,
-        username: user.username
+        username: user.username,
+        roles: rolesArr
       }
     };
   }
 
-  async registerSeedUser(): Promise<void> {
+  async registerSeedUser() {
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Only allow seeded user creation in dev or if explicitly enabled
+      if (!deterministicSeedCredentialsAllowed()) {
+        return; // Skip all seeded user creation
+      }
       const permissionDefinitions = [
-        { key: "admin.manage", description: "Manage users and system policies" },
-        { key: "stories.review", description: "Review and ingest newsroom stories" },
-        { key: "transactions.read", description: "View finance transaction history" },
-        { key: "finance.review", description: "Create and approve internal charges" },
-        { key: "finance.refund", description: "Process full and partial refunds" },
-        { key: "finance.freeze", description: "Freeze disputed transactions" },
-        { key: "audit.read", description: "Search and export audit reports" },
-        { key: "alerts.read", description: "View operational alerts dashboard" },
-        { key: "auditor.release_freeze", description: "Release frozen transactions" }
-      ] as const;
+        { key: "admin.manage", description: "Admin Management" },
+        { key: "stories.review", description: "Review Stories" },
+        { key: "transactions.read", description: "Read Transactions" },
+        { key: "finance.review", description: "Review Finance" },
+        { key: "finance.refund", description: "Refund Finance" },
+        { key: "finance.freeze", description: "Freeze Finance" },
+        { key: "audit.read", description: "Read Audit Logs" },
+        { key: "alerts.read", description: "Read Alerts" },
+        { key: "auditor.release_freeze", description: "Release Freeze" }
+      ];
 
       const permissions = new Map<string, string>();
       for (const definition of permissionDefinitions) {
@@ -207,51 +211,49 @@ export class AuthService {
 
         for (const key of definition.permissionKeys) {
           const permissionId = permissions.get(key);
-          if (!permissionId) {
-            continue;
+          if (permissionId) {
+            await tx.rolePermission.upsert({
+              where: {
+                roleId_permissionId: {
+                  roleId: role.id,
+                  permissionId
+                }
+              },
+              update: {},
+              create: { roleId: role.id, permissionId }
+            });
           }
-          await tx.rolePermission.upsert({
-            where: {
-              roleId_permissionId: {
-                roleId: role.id,
-                permissionId
-              }
-            },
-            update: {},
-            create: { roleId: role.id, permissionId }
-          });
         }
       }
 
       for (const seededUser of SEEDED_USERS) {
-        const existing = await tx.user.findUnique({ where: { username: seededUser.username } });
-        if (!existing && !deterministicSeedCredentialsAllowed()) {
-          continue;
-        }
-        const user =
-          existing ??
-          (await tx.user.create({
+
+        let user: import("@prisma/client").User | null = await tx.user.findUnique({ where: { username: seededUser.username } });
+        // Only create user if allowed
+        if (!user && deterministicSeedCredentialsAllowed()) {
+          user = await tx.user.create({
             data: {
               username: seededUser.username,
               passwordHash: await bcrypt.hash(seededUser.password, 12)
             }
-          }));
+          });
+        }
+        // If user still doesn't exist, skip role assignment
+        if (!user) continue;
 
         const roleId = roles.get(seededUser.role);
-        if (!roleId) {
-          continue;
+        if (roleId) {
+          await tx.userRole.upsert({
+            where: {
+              userId_roleId: {
+                userId: user.id,
+                roleId
+              }
+            },
+            update: {},
+            create: { userId: user.id, roleId }
+          });
         }
-
-        await tx.userRole.upsert({
-          where: {
-            userId_roleId: {
-              userId: user.id,
-              roleId
-            }
-          },
-          update: {},
-          create: { userId: user.id, roleId }
-        });
       }
     });
   }

@@ -30,6 +30,8 @@ Run the full stack with one command from the project root (`repo/`):
 docker compose up --build
 ```
 
+> **Legacy Docker standalone binary alias:** `docker-compose up --build` (hyphenated) is equivalent if you are using the older standalone `docker-compose` binary instead of the Docker CLI plugin.
+
 No manual migration step is required. The backend container applies Prisma migrations during startup.
 
 Payment channel signature verification requires all channel secrets to be configured at startup:
@@ -133,16 +135,6 @@ Sample output interpretation:
 - Jest output under each suite provides per-test pass/fail and failure reasons.
 - Final line `total=<n> pass=<n> fail=<n>` is the final acceptance summary.
 
-## Standard Non-Docker Verification
-
-```bash
-npm install
-npm run test:e2e:install --workspace frontend
-npm run verify:standard
-```
-
-`verify:standard` runs backend unit + targeted backend API/e2e + frontend unit/integration + frontend browser E2E.
-
 ## Verification Procedure
 
 1. Start stack: `docker compose up --build`
@@ -201,7 +193,6 @@ Expected success output includes `PASS (<=2h)`.
 - Port conflicts (3000/5173/5432/6379):
   - Stop conflicting process or adjust host mapping in `docker-compose.yml`.
 - Tests fail after schema changes:
-  - Docker flow: rerun `docker compose up --build` so backend startup reapplies migrations.
-  - Local backend flow: run `npx prisma migrate deploy` in `backend/`, then rerun `npm run test:all`.
+  - Rerun `docker compose up --build` so the backend container reapplies Prisma migrations on startup.
 - Backup script failures:
   - Ensure `DATABASE_URL` is valid in backend runtime and `pg_dump/psql` are available in container/host context.

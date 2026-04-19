@@ -74,8 +74,11 @@ describe("AuthService seeded credential hardening", () => {
   });
 
   it("skips deterministic seeded user creation in non-dev unless explicitly allowed", async () => {
+
+    // Ensure all env vars that could allow seeding are unset/false
     process.env.NODE_ENV = "production";
-    delete process.env.ALLOW_DETERMINISTIC_SEED_CREDENTIALS;
+    process.env.ENABLE_SEEDING = "false";
+    process.env.ALLOW_DETERMINISTIC_SEED_CREDENTIALS = "false";
 
     const tx = {
       permission: {

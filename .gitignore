@@ -42,5 +42,7 @@ tmp/
 session/
 .meta/
 temp/
+session/
+.claude/
 
 /*.zip
